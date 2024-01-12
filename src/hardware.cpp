@@ -4,7 +4,6 @@
 #include <hardware/adc.h>
 #include <hardware/pio.h>
 #include <pico/time.h>
-#include "hardware/timer.h"
 #include "pac.pio.h"
 #include "config.hpp"
 
@@ -30,6 +29,13 @@ constexpr auto SOLENOID_PIN = 9;
 constexpr auto LIGHT_PIN_BASE = 16;
 constexpr auto SWITCH_PIN_BASE = 19;
 
+absolute_time_t switch_transition_time[3] = {nil_time};
+
+static void switch_irq_handler(uint gpio, uint32_t event_mask) {
+    int which = gpio - SWITCH_PIN_BASE;
+
+    switch_transition_time[which] = make_timeout_time_ms(20);
+}
 
 void hardware::init() {
     // Temp sensor
@@ -69,10 +75,15 @@ void hardware::init() {
     }
     // Switches
     for (int i = 0; i < 3; ++i) {
-        gpio_init(SWITCH_PIN_BASE + i);
-        gpio_set_dir(SWITCH_PIN_BASE + i, false);
-        gpio_pull_up(SWITCH_PIN_BASE + i);
+        int gpio = SWITCH_PIN_BASE + i;
+        gpio_init(gpio);
+        gpio_set_dir(gpio, false);
+        gpio_pull_up(gpio);
+        gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
     }
+
+    gpio_set_irq_callback(switch_irq_handler);
+    irq_set_enabled(IO_IRQ_BANK0, true);
 }
 
 void hardware::set_heater(float val) {
@@ -121,21 +132,23 @@ void hardware::set_light(Switch which, bool active) {
 }
 
 bool hardware::get_switch(Switch which) {
-    return !gpio_get(SWITCH_PIN_BASE + which);
+    static bool last_state[3] = {false};
+
+    if (time_reached(switch_transition_time[which])) {
+        last_state[which] = !gpio_get(SWITCH_PIN_BASE + which);
+        switch_transition_time[which] = at_the_end_of_time;
+    }
+
+    return last_state[which];
 }
 
 bool hardware::is_power_just_pressed() {
+    static bool last_pressed = false;
+    bool curr_pressed = get_switch(Power);
 
-    static bool curr_pressed = false;
-    static absolute_time_t next_press_time = nil_time;
-
-    if (!curr_pressed && get_switch(Power) && time_reached(next_press_time)) {
-        next_press_time = make_timeout_time_ms(200);
-        curr_pressed = true;
-        return true;
-    }
-    if (curr_pressed && !get_switch(Power)) {
-        curr_pressed = false;
+    if (curr_pressed != last_pressed) {
+        last_pressed = curr_pressed;
+        return curr_pressed;
     }
     return false;
 }
