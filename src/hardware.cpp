@@ -4,6 +4,7 @@
 #include <hardware/adc.h>
 #include <hardware/pio.h>
 #include <pico/time.h>
+#include "moving_average.hpp"
 #include "pac.pio.h"
 #include "config.hpp"
 
@@ -101,6 +102,7 @@ void hardware::set_solenoid(bool active) {
 float hardware::read_temp() {
     static absolute_time_t next_read_time = nil_time;
     static float last_value = 0;
+    static MovingAverage<5> avg;
 
     if (!time_reached(next_read_time)) {
         return last_value;
@@ -117,7 +119,9 @@ float hardware::read_temp() {
     asm volatile("nop \n nop \n nop");
     gpio_put(TEMP_CS_PIN, 1);
 
-    last_value = data * 0.25;
+    avg.push(data * 0.25);
+    last_value = avg.average();
+    spin_unlock(temp_spin_lock, irq);
     return last_value;
 }
 
