@@ -25,7 +25,7 @@ void on_enter_state(State state) {
         hardware::set_light(hardware::Steam, false);
         break;
     case State::Standby:
-        control::set_target_temperature(93);
+        control::set_target_temperature(95);
         control::set_boiler_enabled(true);
         break;
     case State::Brew:
@@ -80,9 +80,9 @@ void protocol::main_loop() {
                 continue;
             }
             if (hardware::get_switch(hardware::Steam)) {
-                control::set_target_temperature(155);
+                control::set_target_temperature(130);
             } else {
-                control::set_target_temperature(93);
+                control::set_target_temperature(95);
             }
         }
 
