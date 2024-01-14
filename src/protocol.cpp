@@ -54,8 +54,8 @@ void switch_state(State new_state) {
     on_leave_state(current_state);
     current_state = new_state;
     on_enter_state(current_state);
-    HelloMessage msg;
-    msg.num = (int)new_state;
+    StateChangeMessage msg;
+    msg.new_state = (int)new_state;
     network::send(msg);
 }
 
@@ -69,6 +69,7 @@ void protocol::main_loop() {
             }
             continue;
         }
+
         if (hardware::is_power_just_pressed()) {
             switch_state(State::Off);
             continue;

@@ -19,12 +19,12 @@ static void write_val(u8*& ptr, T value) {
     }
 };
 
-void HelloMessage::write(u8*& ptr) {
+void StateChangeMessage::write(u8*& ptr) {
     write_val(ptr, ID);
-    write_val(ptr, num);
+    write_val(ptr, new_state);
 }
 
-void StatusMessage::write(u8*& ptr) {
+void SensorStatusMessage::write(u8*& ptr) {
     write_val(ptr, ID);
     write_val(ptr, temp);
     write_val(ptr, pressure);
