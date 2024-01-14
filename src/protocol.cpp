@@ -2,7 +2,6 @@
 #include <pico/time.h>
 #include "control.hpp"
 #include "hardware.hpp"
-#include "messages.hpp"
 #include "network.hpp"
 
 using namespace protocol;
@@ -95,5 +94,15 @@ void protocol::main_loop() {
         }
 
         control::update();
+    }
+}
+
+void protocol::network_loop() {
+    SensorStatusMessage msg;
+    while (true) {
+        msg.pressure = hardware::read_pressure();
+        msg.temp = hardware::read_temp();
+        network::send(msg);
+        sleep_ms(250);
     }
 }
