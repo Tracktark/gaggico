@@ -12,31 +12,32 @@
 using namespace network;
 
 tcp_pcb* clients[CLIENT_CAPACITY] = {0};
-u8 out_data_buffer[127];
+u8 out_message_buffer[127];
 
-static err_t incoming_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err) {
-    if (!p) {
-        printf("Connection closed\n");
-        for (std::size_t i = 0; i < CLIENT_CAPACITY; ++i) {
-            if (clients[i] == tpcb) {
-                clients[i] = nullptr;
-            }
+static err_t close_connection(struct tcp_pcb* tpcb) {
+    for (std::size_t i = 0; i < CLIENT_CAPACITY; ++i) {
+        if (clients[i] == tpcb) {
+            clients[i] = nullptr;
+            break;
         }
-        err_t close_err = tcp_close(tpcb);
-        if (close_err != ERR_OK) {
-            printf("Connection close failed, aborting: %d\n", close_err);
-            tcp_abort(tpcb);
-            return ERR_ABRT;
-        }
-        return ERR_OK;
     }
 
-    pbuf_free(p);
+    err_t err = tcp_close(tpcb);
+    if (err != ERR_OK) {
+        printf("Connection close failed, aborting: %d\n", err);
+        tcp_abort(tpcb);
+        return ERR_ABRT;
+    }
+    printf("Connection closed\n");
     return ERR_OK;
 }
 
-static err_t sent_callback(void* arg, struct tcp_pcb* pcb, u16 len) {
-    printf("Data sent\n");
+static err_t incoming_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err) {
+    if (!p) {
+        return close_connection(tpcb);
+    }
+
+    pbuf_free(p);
     return ERR_OK;
 }
 
@@ -56,37 +57,42 @@ static err_t new_connection_callback(void* arg, struct tcp_pcb* client_pcb, err_
     }
     if (no_capacity) {
         printf("No capacity for new client\n");
-        return ERR_OK;
+        return close_connection(client_pcb);
     }
 
+    printf("New connection\n");
     tcp_recv(client_pcb, incoming_callback);
-    tcp_sent(client_pcb, sent_callback);
     return ERR_OK;
 }
 
 void network::send(OutMessage& msg) {
     cyw43_arch_lwip_begin();
-    u8* start = out_data_buffer + sizeof(u32);
+    u8* start = out_message_buffer + sizeof(u32);
     u8* end = start;
     msg.write(end);
     u32 msglen = end - start;
     u32 msglen_n = htonl(msglen);
-    memcpy(out_data_buffer, &msglen_n, sizeof(u32));
+    memcpy(out_message_buffer, &msglen_n, sizeof(u32));
 
     u32 len = msglen + sizeof(u32);
 
     for (std::size_t i = 0; i < CLIENT_CAPACITY; ++i) {
         if (clients[i] == nullptr) continue;
 
-        err_t err = tcp_write(clients[i], out_data_buffer, len, 0);
+        err_t err = tcp_write(clients[i], out_message_buffer, len, 0);
         if (err != ERR_OK) {
+            if (err == ERR_CONN) {
+                printf("Client not connected, closing connection\n");
+                close_connection(clients[i]);
+                continue;
+            }
             printf("Couldn't write tcp: %d\n", err);
-            return;
+            continue;
         }
         err = tcp_output(clients[i]);
         if (err != ERR_OK) {
             printf("Couldn't output tcp: %d\n", err);
-            return;
+            continue;
         }
     }
     cyw43_arch_lwip_end();
