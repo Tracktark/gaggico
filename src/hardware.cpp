@@ -8,6 +8,7 @@
 #include "moving_average.hpp"
 #include "pac.pio.h"
 #include "config.hpp"
+#include "panic.hpp"
 
 using namespace hardware;
 
@@ -127,6 +128,9 @@ float hardware::read_temp() {
     asm volatile("nop \n nop \n nop");
     gpio_put(TEMP_CS_PIN, 1);
 
+    if (data == 0) {
+        panic(Error::SENSOR_ERROR);
+    }
     avg.push(data * 0.25);
     last_value = avg.average();
     critical_section_exit(&temp_cs);
