@@ -51,3 +51,10 @@ struct SettingsUpdateMessage : InMessage {
     virtual ~SettingsUpdateMessage() {}
 };
 
+struct GetStatusMessage : InMessage {
+    static constexpr i32 ID = 3;
+
+    virtual void read(u8*& ptr);
+    virtual void handle();
+    virtual ~GetStatusMessage() {}
+};

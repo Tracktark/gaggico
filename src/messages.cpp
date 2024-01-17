@@ -35,3 +35,10 @@ void SettingsUpdateMessage::handle() {
     network::send(SettingsGetMessage());
 }
 
+void GetStatusMessage::read(u8*& ptr) {}
+void GetStatusMessage::handle() {
+    StateChangeMessage msg;
+    msg.new_state = (int)protocol::get_state();
+    network::send(msg);
+    network::send(SettingsGetMessage());
+}

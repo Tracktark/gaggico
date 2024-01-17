@@ -7,13 +7,11 @@
 
 using namespace protocol;
 
-enum class State {
-    Off,
-    Standby,
-    Brew,
-};
-
 State current_state = State::Off;
+
+State protocol::get_state() {
+    return current_state;
+}
 
 void on_enter_state(State state) {
     switch (state) {

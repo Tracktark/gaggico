@@ -57,6 +57,9 @@ static err_t incoming_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, 
     case SettingsUpdateMessage::ID:
         msg = new SettingsUpdateMessage;
         break;
+    case GetStatusMessage::ID:
+        msg = new GetStatusMessage;
+        break;
     }
 
     msg->read(msg_data);
