@@ -1,4 +1,5 @@
 #include "network.hpp"
+#include <array>
 #include <pico/cyw43_arch.h>
 #include <lwip/tcp.h>
 #include <lwip/pbuf.h>
@@ -12,7 +13,8 @@
 using namespace network;
 
 tcp_pcb* clients[CLIENT_CAPACITY] = {0};
-u8 out_message_buffer[127];
+std::array<u8, 127> out_message_buffer;
+std::array<u8, 127> in_message_buffer;
 
 static err_t close_connection(struct tcp_pcb* tpcb) {
     for (std::size_t i = 0; i < CLIENT_CAPACITY; ++i) {
@@ -67,19 +69,19 @@ static err_t new_connection_callback(void* arg, struct tcp_pcb* client_pcb, err_
 
 void network::send(OutMessage& msg) {
     cyw43_arch_lwip_begin();
-    u8* start = out_message_buffer + sizeof(u32);
+    u8* start = out_message_buffer.data() + sizeof(u32);
     u8* end = start;
     msg.write(end);
     u32 msglen = end - start;
     u32 msglen_n = htonl(msglen);
-    memcpy(out_message_buffer, &msglen_n, sizeof(u32));
+    memcpy(out_message_buffer.data(), &msglen_n, sizeof(u32));
 
     u32 len = msglen + sizeof(u32);
 
     for (std::size_t i = 0; i < CLIENT_CAPACITY; ++i) {
         if (clients[i] == nullptr) continue;
 
-        err_t err = tcp_write(clients[i], out_message_buffer, len, 0);
+        err_t err = tcp_write(clients[i], out_message_buffer.data(), len, 0);
         if (err != ERR_OK) {
             if (err == ERR_CONN) {
                 printf("Client not connected, closing connection\n");
