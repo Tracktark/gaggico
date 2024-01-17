@@ -19,6 +19,7 @@ add_executable(gaggico
   src/control.cpp
   src/protocol.cpp
   src/messages.cpp
+  src/settings.cpp
   src/main.cpp)
 
 pico_generate_pio_header(gaggico ${CMAKE_CURRENT_LIST_DIR}/src/pac.pio)

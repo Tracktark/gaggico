@@ -15,6 +15,8 @@ static void core1_entry() {
 
 int main() {
     stdio_init_all();
+    multicore_lockout_victim_init();
+    settings::init();
     hardware::init();
 
     multicore_launch_core1(core1_entry);
