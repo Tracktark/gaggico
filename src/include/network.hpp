@@ -10,5 +10,5 @@ constexpr auto CLIENT_CAPACITY = 10;
 void wifi_init();
 void server_init();
 
-void send(OutMessage& msg);
+void send(const OutMessage& msg);
 }

@@ -89,7 +89,7 @@ static err_t new_connection_callback(void* arg, struct tcp_pcb* client_pcb, err_
     return ERR_OK;
 }
 
-void network::send(OutMessage& msg) {
+void network::send(const OutMessage& msg) {
     cyw43_arch_lwip_begin();
     u8* start = out_message_buffer.data() + sizeof(u32);
     u8* end = start;
