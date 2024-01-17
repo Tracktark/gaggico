@@ -3,7 +3,7 @@
 #include <hardware/spi.h>
 #include <hardware/adc.h>
 #include <hardware/pio.h>
-#include <hardware/sync.h>
+#include <pico/sync.h>
 #include <pico/time.h>
 #include "moving_average.hpp"
 #include "pac.pio.h"
@@ -39,7 +39,7 @@ static void switch_irq_handler(uint gpio, uint32_t event_mask) {
     switch_transition_time[which] = make_timeout_time_ms(20);
 }
 
-spin_lock_t* temp_spin_lock;
+critical_section_t temp_cs;
 
 void hardware::init() {
     // Temp sensor
@@ -52,7 +52,7 @@ void hardware::init() {
     gpio_set_dir(TEMP_CS_PIN, GPIO_OUT);
     gpio_put(TEMP_CS_PIN, 1);
 
-    temp_spin_lock = spin_lock_init(spin_lock_claim_unused(true));
+    critical_section_init(&temp_cs);
 
     // Pressure sensor
     adc_init();
@@ -105,14 +105,14 @@ void hardware::set_solenoid(bool active) {
 }
 
 float hardware::read_temp() {
-    uint32_t irq = spin_lock_blocking(temp_spin_lock);
+    critical_section_enter_blocking(&temp_cs);
 
     static absolute_time_t next_read_time = nil_time;
     static float last_value = 0;
     static MovingAverage<5> avg;
 
     if (!time_reached(next_read_time)) {
-        spin_unlock(temp_spin_lock, irq);
+        critical_section_exit(&temp_cs);
         return last_value;
     }
     next_read_time = make_timeout_time_ms(TEMP_READ_INTERVAL);
@@ -129,7 +129,7 @@ float hardware::read_temp() {
 
     avg.push(data * 0.25);
     last_value = avg.average();
-    spin_unlock(temp_spin_lock, irq);
+    critical_section_exit(&temp_cs);
     return last_value;
 }
 
