@@ -4,6 +4,7 @@
 #include <lwip/tcp.h>
 #include <lwip/pbuf.h>
 #include "config.hpp"
+#include "messages.hpp"
 #include "panic.hpp"
 
 #ifndef COUNTRY_CODE
@@ -38,6 +39,24 @@ static err_t incoming_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, 
     if (!p) {
         return close_connection(tpcb);
     }
+
+    pbuf_copy_partial(p, in_message_buffer.data(), 2*sizeof(u32), 0);
+    u32* data = (u32*)in_message_buffer.data();
+
+    u32 len = ntohl(data[0]) - sizeof(u32);
+    u32 msg_id = ntohl(data[1]);
+
+    pbuf_copy_partial(p, in_message_buffer.data(), len, 8);
+    u8* msg_data = in_message_buffer.data();
+
+    InMessage* msg;
+    switch (msg_id) {
+    }
+
+    msg->read(msg_data);
+    msg->handle();
+
+    delete msg;
 
     pbuf_free(p);
     return ERR_OK;
