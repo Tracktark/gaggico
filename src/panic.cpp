@@ -10,6 +10,9 @@ constexpr auto DELAY_LONG = DELAY_SHORT * 5;
 void panic(Error error) {
     u32 blinks = static_cast<u32>(error) + 1;
     while (true) {
+        hardware::set_heater(0);
+        hardware::set_pump(0);
+        hardware::set_solenoid(false);
         for (int i = 0; i < blinks; i++) {
             hardware::set_light(hardware::Power, true);
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, true);
