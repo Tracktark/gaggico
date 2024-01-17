@@ -25,3 +25,12 @@ struct InMessage {
     virtual ~InMessage() {};
 };
 
+struct PowerMessage : InMessage {
+    static constexpr i32 ID = 1;
+    bool status;
+
+    virtual void read(u8*& ptr);
+    virtual void handle();
+    virtual ~PowerMessage() {}
+};
+

@@ -1,4 +1,5 @@
 #include "messages.hpp"
+#include "protocol.hpp"
 #include "serde.hpp"
 
 void StateChangeMessage::write(u8*& ptr) {
@@ -11,3 +12,10 @@ void SensorStatusMessage::write(u8*& ptr) {
     write_val(ptr, temp);
     write_val(ptr, pressure);
 }
+void PowerMessage::read(u8*& ptr) {
+    read_val(ptr, status);
+}
+void PowerMessage::handle() {
+    protocol::set_power(status);
+}
+

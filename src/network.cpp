@@ -51,6 +51,9 @@ static err_t incoming_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, 
 
     InMessage* msg;
     switch (msg_id) {
+    case PowerMessage::ID:
+        msg = new PowerMessage;
+        break;
     }
 
     msg->read(msg_data);

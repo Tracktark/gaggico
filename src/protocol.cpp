@@ -50,12 +50,23 @@ void on_leave_state(State state) {
 }
 
 void switch_state(State new_state) {
+    if (current_state == new_state) return;
+
     on_leave_state(current_state);
     current_state = new_state;
     on_enter_state(current_state);
+
     StateChangeMessage msg;
     msg.new_state = (int)new_state;
     network::send(msg);
+}
+
+void protocol::set_power(bool on) {
+    if (current_state == State::Off && on) {
+        switch_state(State::Standby);
+    } else if (current_state != State::Off && !on){
+        switch_state(State::Off);
+    }
 }
 
 void protocol::main_loop() {
@@ -64,13 +75,13 @@ void protocol::main_loop() {
     while (true) {
         if (current_state == State::Off) {
             if (hardware::is_power_just_pressed()) {
-                switch_state(State::Standby);
+                set_power(true);
             }
             continue;
         }
 
         if (hardware::is_power_just_pressed()) {
-            switch_state(State::Off);
+            set_power(false);
             continue;
         }
 
