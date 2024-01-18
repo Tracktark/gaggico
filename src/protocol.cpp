@@ -8,6 +8,7 @@
 using namespace protocol;
 
 State current_state = State::Off;
+absolute_time_t brew_start_time;
 
 State protocol::get_state() {
     return current_state;
@@ -27,6 +28,7 @@ void on_enter_state(State state) {
         control::set_boiler_enabled(true);
         break;
     case State::Brew:
+        brew_start_time = get_absolute_time();
         hardware::set_solenoid(true);
         control::set_pump_enabled(true);
     }
@@ -99,7 +101,11 @@ void protocol::main_loop() {
                 switch_state(State::Standby);
                 continue;
             }
+            if (absolute_time_diff_us(brew_start_time, get_absolute_time()) < settings::get().preinfusion_time * 1'000'000) {
+                control::set_target_pressure(settings::get().preinfusion_pressure);
+            } else {
                 control::set_target_pressure(settings::get().brew_pressure);
+            }
         }
 
         control::update();

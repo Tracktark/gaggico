@@ -9,7 +9,7 @@ using namespace settings;
 
 constexpr auto SETTINGS_FLASH_OFFSET = (1024 * 1024);
 constexpr auto SETTINGS_MAGIC = "GAGGICO ";
-constexpr u32 SETTINGS_VERSION = 1;
+constexpr u32 SETTINGS_VERSION = 2;
 const u8* flash_settings = reinterpret_cast<const u8*>(XIP_BASE + SETTINGS_FLASH_OFFSET);
 
 Settings current_settings;
@@ -19,6 +19,8 @@ void load_default() {
         .brew_temp = 95,
         .steam_temp = 150,
         .brew_pressure = 9,
+        .preinfusion_pressure = 3,
+        .preinfusion_time = 5,
     };
     update(default_settings);
 }
@@ -82,10 +84,14 @@ void Settings::write(u8*& ptr) const {
     write_val(ptr, brew_temp);
     write_val(ptr, steam_temp);
     write_val(ptr, brew_pressure);
+    write_val(ptr, preinfusion_pressure);
+    write_val(ptr, preinfusion_time);
 }
 
 void Settings::read(u8*& ptr) {
     read_val(ptr, brew_temp);
     read_val(ptr, steam_temp);
     read_val(ptr, brew_pressure);
+    read_val(ptr, preinfusion_pressure);
+    read_val(ptr, preinfusion_time);
 }
