@@ -18,6 +18,7 @@ void load_default() {
     Settings default_settings {
         .brew_temp = 95,
         .steam_temp = 150,
+        .brew_pressure = 9,
     };
     update(default_settings);
 }
@@ -80,9 +81,11 @@ void settings::update(Settings& new_settings) {
 void Settings::write(u8*& ptr) const {
     write_val(ptr, brew_temp);
     write_val(ptr, steam_temp);
+    write_val(ptr, brew_pressure);
 }
 
 void Settings::read(u8*& ptr) {
     read_val(ptr, brew_temp);
     read_val(ptr, steam_temp);
+    read_val(ptr, brew_pressure);
 }

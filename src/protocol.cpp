@@ -28,7 +28,6 @@ void on_enter_state(State state) {
         break;
     case State::Brew:
         hardware::set_solenoid(true);
-        control::set_target_pressure(9);
         control::set_pump_enabled(true);
     }
 }
@@ -100,6 +99,7 @@ void protocol::main_loop() {
                 switch_state(State::Standby);
                 continue;
             }
+                control::set_target_pressure(settings::get().brew_pressure);
         }
 
         control::update();
