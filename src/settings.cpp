@@ -61,12 +61,17 @@ void settings::update(Settings& new_settings) {
     *reinterpret_cast<Settings*>(buf_ptr) = new_settings;
 
     u32 save = save_and_disable_interrupts();
-    if (get_core_num() == 1) {
+
+    bool locked_out = false;
+    if (multicore_lockout_victim_is_initialized(1 - get_core_num())) {
+        locked_out = true;
         multicore_lockout_start_blocking();
     }
+
     flash_range_erase(SETTINGS_FLASH_OFFSET, FLASH_SECTOR_SIZE);
     flash_range_program(SETTINGS_FLASH_OFFSET, buffer, FLASH_PAGE_SIZE);
-    if (get_core_num() == 1) {
+
+    if (locked_out) {
         multicore_lockout_end_blocking();
     }
     restore_interrupts(save);

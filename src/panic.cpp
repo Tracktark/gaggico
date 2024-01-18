@@ -9,9 +9,10 @@ constexpr auto DELAY_LONG = DELAY_SHORT * 5;
 
 [[noreturn]]
 void panic(Error error) {
-    if (get_core_num() == 1) {
+    if (multicore_lockout_victim_is_initialized(1 - get_core_num())) {
         multicore_lockout_start_blocking();
     }
+
     u32 blinks = static_cast<u32>(error) + 1;
     while (true) {
         hardware::set_heater(0);

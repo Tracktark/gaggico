@@ -6,6 +6,7 @@
 #include "hardware.hpp"
 
 static void core1_entry() {
+    multicore_lockout_victim_init();
     network::wifi_init();
     discovery::init();
     network::server_init();
