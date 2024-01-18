@@ -1,5 +1,6 @@
 #include "panic.hpp"
 #include <pico/cyw43_arch.h>
+#include <pico/multicore.h>
 #include "hardware.hpp"
 #include "inttypes.hpp"
 
@@ -8,6 +9,9 @@ constexpr auto DELAY_LONG = DELAY_SHORT * 5;
 
 [[noreturn]]
 void panic(Error error) {
+    if (get_core_num() == 1) {
+        multicore_lockout_start_blocking();
+    }
     u32 blinks = static_cast<u32>(error) + 1;
     while (true) {
         hardware::set_heater(0);
