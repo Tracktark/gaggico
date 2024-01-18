@@ -9,6 +9,7 @@ using namespace protocol;
 
 State current_state = State::Off;
 absolute_time_t brew_start_time;
+absolute_time_t machine_start_time;
 
 State protocol::get_state() {
     return current_state;
@@ -62,6 +63,7 @@ void switch_state(State new_state) {
 
 void protocol::set_power(bool on) {
     if (current_state == State::Off && on) {
+        machine_start_time = get_absolute_time();
         switch_state(State::Standby);
     } else if (current_state != State::Off && !on){
         switch_state(State::Off);
@@ -89,6 +91,15 @@ void protocol::main_loop() {
                 switch_state(State::Brew);
                 continue;
             }
+
+            if (absolute_time_diff_us(machine_start_time, get_absolute_time()) < 2'000'000) {
+                hardware::set_pump(0.35);
+                hardware::set_solenoid(true);
+            } else {
+                control::set_pump_enabled(false);
+                hardware::set_solenoid(false);
+            }
+
             if (hardware::get_switch(hardware::Steam)) {
                 control::set_target_temperature(settings::get().steam_temp);
             } else {
