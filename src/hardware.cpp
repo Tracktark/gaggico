@@ -9,6 +9,7 @@
 #include "pac.pio.h"
 #include "config.hpp"
 #include "panic.hpp"
+#include "psm.hpp"
 
 using namespace hardware;
 
@@ -24,8 +25,7 @@ constexpr auto PRESSURE_PIN = 26;
 constexpr auto ZERO_CROSS_PIN = 10;
 constexpr auto HEAT_DIM_PIN = 11;
 constexpr auto PUMP_DIM_PIN = 12;
-constexpr auto PUMP_PIO_SM = 0;
-constexpr auto HEAT_PIO_SM = 1;
+constexpr auto HEAT_PIO_SM = 0;
 
 constexpr auto SOLENOID_PIN = 9;
 
@@ -34,10 +34,16 @@ constexpr auto SWITCH_PIN_BASE = 19;
 
 absolute_time_t switch_transition_time[3] = {nil_time};
 
-static void switch_irq_handler(uint gpio, uint32_t event_mask) {
-    int which = gpio - SWITCH_PIN_BASE;
+PSM pump_psm(PUMP_DIM_PIN, 100);
 
-    switch_transition_time[which] = make_timeout_time_ms(20);
+static void gpio_irq_handler(uint gpio, uint32_t event_mask) {
+    if (gpio >= SWITCH_PIN_BASE && gpio < SWITCH_PIN_BASE + 3) {
+        int which = gpio - SWITCH_PIN_BASE;
+        switch_transition_time[which] = make_timeout_time_ms(20);
+    }
+    if (gpio == ZERO_CROSS_PIN && (event_mask & GPIO_IRQ_EDGE_RISE) > 0) {
+        pump_psm.zero_crossing_handler();
+    }
 }
 
 critical_section_t temp_cs;
@@ -64,14 +70,13 @@ void hardware::init() {
     // Dimmers
     uint offset = pio_add_program(DIMMER_PIO, &pac_program);
     pac_pio_init(DIMMER_PIO, HEAT_PIO_SM, offset, HEAT_DIM_PIN, ZERO_CROSS_PIN);
-    pac_pio_init(DIMMER_PIO, PUMP_PIO_SM, offset, PUMP_DIM_PIN, ZERO_CROSS_PIN);
     set_heater(0);
     set_pump(0);
+    gpio_set_irq_enabled(ZERO_CROSS_PIN, GPIO_IRQ_EDGE_RISE, true);
 
     // Relay
     gpio_init(SOLENOID_PIN);
     gpio_set_dir(SOLENOID_PIN, true);
-    gpio_put(SOLENOID_PIN, 1);
     set_solenoid(false);
 
     // Lights
@@ -89,7 +94,7 @@ void hardware::init() {
         gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
     }
 
-    gpio_set_irq_callback(switch_irq_handler);
+    gpio_set_irq_callback(gpio_irq_handler);
     irq_set_enabled(IO_IRQ_BANK0, true);
 }
 
@@ -98,7 +103,7 @@ void hardware::set_heater(float val) {
 }
 
 void hardware::set_pump(float val) {
-    pac_pio_set(DIMMER_PIO, PUMP_PIO_SM, MAINS_FREQUENCY_HZ, val);
+    pump_psm.set(val * 100);
 }
 
 void hardware::set_solenoid(bool active) {
