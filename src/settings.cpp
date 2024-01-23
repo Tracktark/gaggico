@@ -2,9 +2,8 @@
 #include <cstring>
 #include <hardware/flash.h>
 #include <pico/multicore.h>
-#include "hardware/sync.h"
-#include "messages.hpp"
-#include "serde.hpp"
+#include "network/messages.hpp"
+#include "network/serde.hpp"
 using namespace settings;
 
 constexpr auto SETTINGS_FLASH_OFFSET = (1024 * 1024);

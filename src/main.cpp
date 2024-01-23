@@ -1,9 +1,9 @@
 #include <pico/stdlib.h>
 #include <pico/multicore.h>
-#include "discovery.hpp"
-#include "network.hpp"
-#include "protocol.hpp"
-#include "hardware.hpp"
+#include "network/discovery.hpp"
+#include "network/network.hpp"
+#include "control/protocol.hpp"
+#include "hardware/hardware.hpp"
 
 static void core1_entry() {
     multicore_lockout_victim_init();

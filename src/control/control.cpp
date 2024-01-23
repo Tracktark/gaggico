@@ -1,6 +1,6 @@
 #include "control.hpp"
 #include <pico/time.h>
-#include "hardware.hpp"
+#include "hardware/hardware.hpp"
 #include "pid.hpp"
 #include "pump.hpp"
 using namespace control;

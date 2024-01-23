@@ -1,7 +1,7 @@
 #include "panic.hpp"
 #include <pico/cyw43_arch.h>
 #include <pico/multicore.h>
-#include "hardware.hpp"
+#include "hardware/hardware.hpp"
 #include "inttypes.hpp"
 
 constexpr auto DELAY_SHORT = 500;

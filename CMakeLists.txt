@@ -12,20 +12,20 @@ set(PICO_BOARD pico_w)
 pico_sdk_init()
 
 add_executable(gaggico
-  src/discovery.cpp
-  src/network.cpp
+  src/network/discovery.cpp
+  src/network/network.cpp
   src/panic.cpp
-  src/hardware.cpp
-  src/control.cpp
-  src/protocol.cpp
-  src/messages.cpp
+  src/hardware/hardware.cpp
+  src/control/control.cpp
+  src/control/protocol.cpp
+  src/network/messages.cpp
   src/settings.cpp
   src/main.cpp)
 
-pico_generate_pio_header(gaggico ${CMAKE_CURRENT_LIST_DIR}/src/pac.pio)
+pico_generate_pio_header(gaggico ${CMAKE_CURRENT_LIST_DIR}/src/hardware/pac.pio)
 
 target_include_directories(gaggico PRIVATE
-  src/include
+  src/network
   src)
 
 target_link_libraries(gaggico

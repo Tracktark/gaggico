@@ -1,8 +1,8 @@
 #include "protocol.hpp"
 #include <pico/time.h>
 #include "control.hpp"
-#include "hardware.hpp"
-#include "network.hpp"
+#include "hardware/hardware.hpp"
+#include "network/network.hpp"
 #include "settings.hpp"
 
 using namespace protocol;

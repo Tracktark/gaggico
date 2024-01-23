@@ -1,6 +1,6 @@
 #include "messages.hpp"
 #include "network.hpp"
-#include "protocol.hpp"
+#include "control/protocol.hpp"
 #include "serde.hpp"
 #include "settings.hpp"
 
