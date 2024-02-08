@@ -1,6 +1,6 @@
 #pragma once
 
-#define WIFI_SSID "wifi-network 2"
+#define WIFI_SSID "wifi-network"
 
 #define WIFI_PASS "12345677"
 
