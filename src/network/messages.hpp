@@ -1,6 +1,7 @@
 #pragma once
 #include "control/protocol.hpp"
 #include "inttypes.hpp"
+#include "ntp.hpp"
 #include "serde.hpp"
 #include "settings.hpp"
 
@@ -10,6 +11,8 @@ struct OutMessage {
 
 struct StateChangeMessage : OutMessage {
     static constexpr i32 ID = 1;
+    u64 state_change_timestamp;
+    u64 machine_start_timestamp;
     i32 new_state;
 
     void write(u8*& ptr) const override {

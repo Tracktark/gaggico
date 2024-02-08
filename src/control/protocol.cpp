@@ -3,6 +3,7 @@
 #include "control.hpp"
 #include "hardware/hardware.hpp"
 #include "network/network.hpp"
+#include "ntp.hpp"
 #include "settings.hpp"
 
 using namespace protocol;
@@ -10,6 +11,7 @@ using namespace protocol;
 State current_state = State::Off;
 absolute_time_t brew_start_time;
 absolute_time_t machine_start_time;
+absolute_time_t state_change_time;
 
 State protocol::get_state() {
     return current_state;
@@ -55,9 +57,12 @@ void switch_state(State new_state) {
     on_leave_state(current_state);
     current_state = new_state;
     on_enter_state(current_state);
+    state_change_time = get_absolute_time();
 
     StateChangeMessage msg;
     msg.new_state = (int)new_state;
+    msg.state_change_timestamp = ntp::to_timestamp(state_change_time) / 1000;
+    msg.machine_start_timestamp = ntp::to_timestamp(machine_start_time) / 1000;
     network::send(msg);
 }
 
@@ -131,4 +136,12 @@ void protocol::network_loop() {
         network::send(msg);
         sleep_ms(250);
     }
+}
+
+absolute_time_t protocol::get_machine_start_time() {
+    return machine_start_time;
+}
+
+absolute_time_t protocol::get_state_change_time() {
+    return state_change_time;
 }
