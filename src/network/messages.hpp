@@ -1,5 +1,7 @@
 #pragma once
+#include "control/protocol.hpp"
 #include "inttypes.hpp"
+#include "serde.hpp"
 #include "settings.hpp"
 
 struct OutMessage {
@@ -10,7 +12,12 @@ struct StateChangeMessage : OutMessage {
     static constexpr i32 ID = 1;
     i32 new_state;
 
-    virtual void write(u8*& ptr) const;
+    void write(u8*& ptr) const override {
+        write_val(ptr, ID);
+        write_val(ptr, state_change_timestamp);
+        write_val(ptr, machine_start_timestamp);
+        write_val(ptr, new_state);
+    }
 };
 
 struct SensorStatusMessage : OutMessage {
@@ -18,13 +25,20 @@ struct SensorStatusMessage : OutMessage {
     float temp;
     float pressure;
 
-    virtual void write(u8*& ptr) const;
+    void write(u8*& ptr) const override  {
+        write_val(ptr, ID);
+        write_val(ptr, temp);
+        write_val(ptr, pressure);
+    }
 };
 
 struct SettingsGetMessage : OutMessage {
     static constexpr i32 ID = 3;
 
-    virtual void write(u8*& ptr) const;
+    void write(u8*& ptr) const override {
+        write_val(ptr, ID);
+        settings::get().write(ptr);
+    }
 };
 
 struct InMessage {
@@ -37,24 +51,30 @@ struct PowerMessage : InMessage {
     static constexpr i32 ID = 1;
     bool status;
 
-    virtual void read(u8*& ptr);
-    virtual void handle();
-    virtual ~PowerMessage() {}
+    void read(u8*& ptr) override {
+        read_val(ptr, status);
+    }
+
+    void handle() override {
+        protocol::set_power(status);
+    }
 };
 
 struct SettingsUpdateMessage : InMessage {
     static constexpr i32 ID = 2;
     Settings settings;
 
-    virtual void read(u8*& ptr);
-    virtual void handle();
-    virtual ~SettingsUpdateMessage() {}
+    void read(u8*& ptr) override {
+        settings.read(ptr);
+    }
+    void handle() override {
+        settings::update(settings);
+    }
 };
 
 struct GetStatusMessage : InMessage {
     static constexpr i32 ID = 3;
 
-    virtual void read(u8*& ptr);
-    virtual void handle();
-    virtual ~GetStatusMessage() {}
+    void read(u8*& ptr) override {}
+    void handle() override;
 };
