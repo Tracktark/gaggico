@@ -19,6 +19,7 @@ add_executable(gaggico
   src/control/control.cpp
   src/control/protocol.cpp
   src/network/messages.cpp
+  src/network/ntp.cpp
   src/settings.cpp
   src/main.cpp)
 
@@ -32,9 +33,13 @@ target_link_libraries(gaggico
   pico_stdlib
   pico_multicore
   pico_cyw43_arch_lwip_threadsafe_background
+  pico_lwip_sntp
   hardware_spi
   hardware_adc)
 
+string(TIMESTAMP CURRENT_YEAR "%Y")
+
+target_compile_definitions(gaggico PRIVATE CURRENT_YEAR=${CURRENT_YEAR})
 pico_enable_stdio_usb(gaggico 1)
 pico_enable_stdio_uart(gaggico 1)
 

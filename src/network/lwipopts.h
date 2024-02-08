@@ -45,4 +45,30 @@
 #define DHCP_DOES_ARP_CHECK         0
 #define LWIP_DHCP_DOES_ACD_CHECK    0
 
+
+#include <inttypes.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void ntp_set_system_time(uint32_t sec, uint32_t us);
+uint64_t ntp_get_system_time();
+
+#ifdef __cplusplus
+}
+#endif
+
+#define SNTP_SET_SYSTEM_TIME_US(sec, us) ntp_set_system_time(sec, us)
+#define SNTP_GET_SYSTEM_TIME_US(sec, us) do {                           \
+        unsigned long long time_us = ntp_get_system_time_us();          \
+        (sec) = time_us / 1000000;                                      \
+        (us) = time_us % 1000000;                                       \
+    } while(0)
+
+#define SNTP_SERVER_DNS 1
+#define SNTP_SERVER_ADDRESS "pool.ntp.org"
+#define SNTP_COMP_ROUNDTRIP 1
+#define SNTP_CHECK_RESPONSE 2
+#define MEMP_NUM_SYS_TIMEOUT (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 1)
+
 #endif /* __LWIPOPTS_H__ */

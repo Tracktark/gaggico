@@ -1,6 +1,7 @@
 #include <pico/stdlib.h>
 #include <pico/multicore.h>
 #include "network/discovery.hpp"
+#include "network/ntp.hpp"
 #include "network/network.hpp"
 #include "control/protocol.hpp"
 #include "hardware/hardware.hpp"
@@ -9,6 +10,7 @@ static void core1_entry() {
     multicore_lockout_victim_init();
     network::wifi_init();
     discovery::init();
+    ntp::init();
     network::server_init();
 
     protocol::network_loop();
