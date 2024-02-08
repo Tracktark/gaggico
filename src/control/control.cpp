@@ -49,7 +49,7 @@ void control::update() {
         hardware::set_heater(heater_value);
 
         bool temp_close_enough = fabs(heater_pid.get_target() - curr_temp) < 1;
-        hardware::set_light(hardware::Steam, temp_close_enough);
+        hardware::set_light(hardware::Brew, temp_close_enough);
     }
 
 
