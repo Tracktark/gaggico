@@ -32,7 +32,6 @@ void SettingsUpdateMessage::read(u8*& ptr) {
 }
 void SettingsUpdateMessage::handle() {
     settings::update(settings);
-    network::send(SettingsGetMessage());
 }
 
 void GetStatusMessage::read(u8*& ptr) {}

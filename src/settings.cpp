@@ -2,6 +2,7 @@
 #include <cstring>
 #include <hardware/flash.h>
 #include <pico/multicore.h>
+#include "network.hpp"
 #include "network/messages.hpp"
 #include "network/serde.hpp"
 using namespace settings;
@@ -77,6 +78,8 @@ void settings::update(Settings& new_settings) {
         multicore_lockout_end_blocking();
     }
     restore_interrupts(save);
+
+    network::send(SettingsGetMessage());
 }
 
 void Settings::write(u8*& ptr) const {
