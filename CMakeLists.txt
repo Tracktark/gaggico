@@ -40,6 +40,8 @@ target_link_libraries(gaggico
 string(TIMESTAMP CURRENT_YEAR "%Y")
 
 target_compile_definitions(gaggico PRIVATE CURRENT_YEAR=${CURRENT_YEAR})
+# target_compile_definitions(gaggico PRIVATE DEBUG_NO_HARDWARE)
+
 pico_enable_stdio_usb(gaggico 1)
 pico_enable_stdio_uart(gaggico 1)
 

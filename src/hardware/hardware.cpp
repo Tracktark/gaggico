@@ -111,6 +111,9 @@ void hardware::set_solenoid(bool active) {
 }
 
 float hardware::read_temp() {
+#ifdef DEBUG_NO_HARDWARE
+    return 30;
+#else
     critical_section_enter_blocking(&temp_cs);
 
     static absolute_time_t next_read_time = nil_time;
@@ -140,6 +143,7 @@ float hardware::read_temp() {
     last_value = avg.average();
     critical_section_exit(&temp_cs);
     return last_value;
+#endif
 }
 
 float hardware::read_pressure() {
