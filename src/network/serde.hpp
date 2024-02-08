@@ -1,12 +1,21 @@
 #pragma once
+#include <bit>
 #include <lwip/def.h>
 #include "inttypes.hpp"
 
 template <class>
 constexpr bool dependent_false = false;
 template <typename T>
-void write_val(u8*& ptr, T value) {
-    if constexpr (sizeof(T) == 4) {
+inline void write_val(u8*& ptr, T value) {
+    if constexpr (sizeof(T) == 8) {
+        if constexpr (std::endian::native == std::endian::little) {
+            *reinterpret_cast<u32*>(ptr) = htonl(*(reinterpret_cast<u32*>(&value) + 1));
+            *(reinterpret_cast<u32*>(ptr) + 1) = htonl(*reinterpret_cast<u32*>(&value));
+        } else {
+            *reinterpret_cast<u64*>(ptr) = *reinterpret_cast<u64*>(&value);
+        }
+        ptr += 8;
+    } else if constexpr (sizeof(T) == 4) {
         *reinterpret_cast<u32*>(ptr) = htonl(*reinterpret_cast<u32*>(&value));
         ptr += 4;
     } else if constexpr (sizeof(T) == 2) {
@@ -21,7 +30,7 @@ void write_val(u8*& ptr, T value) {
 };
 
 template <typename T>
-void read_val(u8*& ptr, T& value) {
+inline void read_val(u8*& ptr, T& value) {
     if constexpr (sizeof(T) == 4) {
         *reinterpret_cast<u32*>(&value) = ntohl(*reinterpret_cast<u32*>(ptr));
         ptr += 4;
