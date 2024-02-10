@@ -6,7 +6,7 @@
 
 namespace statemachine {
 
-inline int curr_state_id = -1;
+volatile inline int curr_state_id = -1;
 inline void(*curr_state_exit)() = nullptr;
 inline bool(*curr_state_check_transitions)() = nullptr;
 
