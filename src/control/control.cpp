@@ -1,10 +1,12 @@
 #include "control.hpp"
 #include <pico/time.h>
+#include "control/impl/kalman_filter.hpp"
 #include "hardware/hardware.hpp"
 #include "impl/pid.hpp"
 #include "pump.hpp"
 using namespace control;
 
+Sensors _sensors;
 
 PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
 bool heater_enabled = false;
@@ -15,7 +17,7 @@ float target_pressure = false;
 void control::set_boiler_enabled(bool enabled) {
     heater_enabled = enabled;
     if (enabled) {
-        heater_pid.reset(hardware::read_temp());
+        heater_pid.reset(_sensors.temperature);
     } else {
         hardware::set_heater(0);
     }
@@ -36,6 +38,18 @@ void control::set_target_temperature(float temperature) {
     heater_pid.set_target(temperature);
 }
 
+void control::update_sensors() {
+    static absolute_time_t update_timeout = nil_time;
+    if (!time_reached(update_timeout)) return;
+    update_timeout = make_timeout_time_us(250);
+
+    static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
+    static SimpleKalmanFilter temp_filter(0.6, 0.6, 0.1);
+
+    _sensors.pressure = pressure_filter.update(hardware::read_pressure());
+    _sensors.temperature = temp_filter.update(hardware::read_temp());
+}
+
 void control::update() {
     if (heater_enabled) {
         static absolute_time_t heater_update_timeout = nil_time;
@@ -43,7 +57,7 @@ void control::update() {
             return;
         heater_update_timeout = make_timeout_time_ms(250);
 
-        float curr_temp = hardware::read_temp();
+        float curr_temp = _sensors.temperature;
 
         float heater_value = heater_pid.update(curr_temp);
         hardware::set_heater(heater_value);
@@ -54,9 +68,13 @@ void control::update() {
 
 
     if (pump_enabled) {
-        float curr_pressure = hardware::read_pressure();
+        float curr_pressure = _sensors.pressure;
 
         float pump_value = getPumpPct(curr_pressure, target_pressure);
         hardware::set_pump(pump_value);
     }
+}
+
+const Sensors& control::sensors() {
+    return _sensors;
 }

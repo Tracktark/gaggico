@@ -5,7 +5,6 @@
 #include <hardware/pio.h>
 #include <pico/sync.h>
 #include <pico/time.h>
-#include "moving_average.hpp"
 #include "pac.pio.h"
 #include "config.hpp"
 #include "panic.hpp"
@@ -118,7 +117,6 @@ float hardware::read_temp() {
 
     static absolute_time_t next_read_time = nil_time;
     static float last_value = 0;
-    static MovingAverage<5> avg;
 
     if (!time_reached(next_read_time)) {
         critical_section_exit(&temp_cs);
@@ -139,8 +137,7 @@ float hardware::read_temp() {
     if (data == 0) {
         panic(Error::SENSOR_ERROR);
     }
-    avg.push(data * 0.25);
-    last_value = avg.average();
+    last_value = data * 0.25;
     critical_section_exit(&temp_cs);
     return last_value;
 #endif

@@ -44,6 +44,7 @@ void protocol::main_loop() {
             continue;
         }
 
+        control::update_sensors();
 
         if (Protocol::has_coroutine) {
             Protocol::Handle handle = Protocol::handle();
@@ -62,8 +63,9 @@ void protocol::main_loop() {
 void protocol::network_loop() {
     SensorStatusMessage msg;
     while (true) {
-        msg.pressure = hardware::read_pressure();
-        msg.temp = hardware::read_temp();
+        const control::Sensors& s = control::sensors();
+        msg.pressure = s.pressure;
+        msg.temp = s.temperature;
         network::send(msg);
         sleep_ms(250);
     }
