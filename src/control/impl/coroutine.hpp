@@ -61,3 +61,12 @@ struct delay_ms : Awaiter {
     bool should_resume() { return time_reached(resume_time); }
     bool await_ready() { return should_resume(); }
 };
+
+struct predicate : Awaiter {
+    bool(*pred)();
+
+    explicit predicate(bool(*pred)()): pred(pred) {}
+
+    bool should_resume() { return pred(); }
+    bool await_ready() { return pred(); }
+};
