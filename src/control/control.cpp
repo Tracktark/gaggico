@@ -1,8 +1,8 @@
 #include "control.hpp"
 #include <pico/time.h>
-#include "control/impl/kalman_filter.hpp"
-#include "hardware/hardware.hpp"
+#include "impl/kalman_filter.hpp"
 #include "impl/pid.hpp"
+#include "hardware/hardware.hpp"
 #include "pump.hpp"
 using namespace control;
 
@@ -39,15 +39,22 @@ void control::set_target_temperature(float temperature) {
 }
 
 void control::update_sensors() {
-    static absolute_time_t update_timeout = nil_time;
-    if (!time_reached(update_timeout)) return;
-    update_timeout = make_timeout_time_us(250);
+    static absolute_time_t pressure_timeout = nil_time;
+    if (time_reached(pressure_timeout)) {
+        static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
+        float raw_pressure = hardware::read_pressure();
+        _sensors.pressure = pressure_filter.update(raw_pressure);
+        pressure_timeout = make_timeout_time_ms(10);
+    }
 
-    static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
-    static SimpleKalmanFilter temp_filter(0.6, 0.6, 0.1);
+    static absolute_time_t temp_timeout = nil_time;
+    if (time_reached(temp_timeout)) {
+        static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.01);
+        float raw_temp = hardware::read_temp();
+        _sensors.temperature = temp_filter.update(raw_temp);
+        temp_timeout = make_timeout_time_ms(250);
+    }
 
-    _sensors.pressure = pressure_filter.update(hardware::read_pressure());
-    _sensors.temperature = temp_filter.update(hardware::read_temp());
 }
 
 void control::update() {
