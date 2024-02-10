@@ -1,6 +1,7 @@
 #pragma once
 #include "hardware/timer.h"
 #include "inttypes.hpp"
+#include "panic.hpp"
 #include <pico/time.h>
 #include <coroutine>
 
@@ -18,6 +19,9 @@ struct Protocol {
         void return_void() noexcept {}
 
         void* operator new(usize len) {
+            if (len > sizeof(buffer)) {
+                panic(Error::COROUTINE_TOO_BIG);
+            }
             has_coroutine = true;
             return buffer;
         }
