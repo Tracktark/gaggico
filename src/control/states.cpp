@@ -17,9 +17,8 @@ bool OffState::check_transitions() {
 
 bool StandbyState::check_transitions() {
     if (hardware::get_switch(hardware::Steam)) {
-        control::set_target_temperature(settings::get().steam_temp);
-    } else {
-        control::set_target_temperature(settings::get().brew_temp);
+        statemachine::change_state<SteamState>();
+        return true;
     }
     if (hardware::get_switch(hardware::Brew)) {
         statemachine::change_state<BrewState>();
@@ -69,4 +68,50 @@ Protocol BrewState::protocol() {
     co_await delay_ms(settings::get().preinfusion_time * 1000);
 
     control::set_target_pressure(settings::get().brew_pressure);
+}
+
+bool SteamState::check_transitions() {
+    if (!hardware::get_switch(hardware::Steam)) {
+        statemachine::change_state<StandbyState>();
+        return true;
+    }
+    return false;
+}
+Protocol SteamState::protocol() {
+    const control::Sensors& sensors = control::sensors();
+
+    co_await predicate([]() {
+        return control::sensors().temperature > 120;
+    });
+
+    hardware::set_solenoid(true);
+    co_await delay_ms(1500);
+    hardware::set_solenoid(false);
+
+    co_await predicate([]() {
+        return control::sensors().temperature > 140;
+    });
+
+    hardware::set_light(hardware::Steam, true);
+
+    float max_pressure = sensors.pressure;
+    while (true) {
+        co_await delay_ms(50);
+
+        if (sensors.pressure > max_pressure) {
+            max_pressure = sensors.pressure;
+        }
+
+        if (max_pressure - sensors.pressure > 2) {
+            break;
+        }
+    }
+
+    while (true) {
+        hardware::set_light(hardware::Steam, false);
+        co_await delay_ms(250);
+        hardware::set_light(hardware::Steam, true);
+        co_await delay_ms(250);
+    }
+
 }

@@ -6,6 +6,7 @@
 #include "hardware/hardware.hpp"
 #include "impl/coroutine.hpp"
 #include "impl/state_machine.hpp"
+#include "settings.hpp"
 
 template <int id>
 using State = statemachine::State<id>;
@@ -31,6 +32,7 @@ struct OffState : State<0> {
 struct StandbyState : State<1> {
     static void on_enter() {
         control::set_boiler_enabled(true);
+        control::set_target_temperature(settings::get().brew_temp);
     }
 
     static void on_exit() {
@@ -51,6 +53,20 @@ struct BrewState : State<2> {
 
     static void on_exit() {
         control::set_pump_enabled(false);
+        hardware::set_solenoid(false);
+    }
+
+    static bool check_transitions();
+    static Protocol protocol();
+};
+
+struct SteamState : State<3> {
+    static void on_enter() {
+        control::set_target_temperature(settings::get().steam_temp);
+    }
+
+    static void on_exit() {
+        hardware::set_light(hardware::Steam, false);
         hardware::set_solenoid(false);
     }
 
