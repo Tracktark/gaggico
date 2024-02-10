@@ -18,6 +18,7 @@ add_executable(gaggico
   src/hardware/hardware.cpp
   src/control/control.cpp
   src/control/protocol.cpp
+  src/control/states.cpp
   src/network/messages.cpp
   src/network/ntp.cpp
   src/settings.cpp
