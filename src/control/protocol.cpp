@@ -63,6 +63,7 @@ void protocol::main_loop() {
 void protocol::network_loop() {
     SensorStatusMessage msg;
     while (true) {
+        if (statemachine::curr_state_id == OffState::ID) continue;
         const control::Sensors& s = control::sensors();
         msg.pressure = s.pressure;
         msg.temp = s.temperature;
