@@ -1,7 +1,6 @@
 #include "protocol.hpp"
 #include <pico/time.h>
-#include "control.hpp"
-#include "hardware/hardware.hpp"
+#include "control/control.hpp"
 #include "control/impl/state_machine.hpp"
 #include "control/states.hpp"
 #include "network/network.hpp"
@@ -9,9 +8,7 @@
 
 using namespace protocol;
 
-absolute_time_t brew_start_time;
-absolute_time_t machine_start_time;
-absolute_time_t state_change_time;
+Times _times;
 
 int protocol::get_state_id() {
     return statemachine::curr_state_id;
@@ -21,9 +18,9 @@ void protocol::on_state_change(int old_state_id, int new_state_id) {
     _times.state_change = get_absolute_time();
 
     StateChangeMessage msg;
-    msg.state_change_timestamp = ntp::to_timestamp(state_change_time) / 1000;
-    msg.machine_start_timestamp = ntp::to_timestamp(machine_start_time) / 1000;
     msg.new_state = new_state_id;
+    msg.state_change_timestamp = ntp::to_timestamp(_times.state_change) / 1000;
+    msg.machine_start_timestamp = ntp::to_timestamp(_times.machine_start) / 1000;
     network::send(msg);
 }
 
@@ -72,10 +69,6 @@ void protocol::network_loop() {
     }
 }
 
-absolute_time_t protocol::get_machine_start_time() {
-    return machine_start_time;
-}
-
-absolute_time_t protocol::get_state_change_time() {
-    return state_change_time;
+Times& protocol::times() {
+    return _times;
 }
