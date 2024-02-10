@@ -1,10 +1,9 @@
 #include "states.hpp"
-#include "control/control.hpp"
-#include "control/protocol.hpp"
+#include <pico/time.h>
+#include "control.hpp"
+#include "impl/coroutine.hpp"
+#include "protocol.hpp"
 #include "hardware/hardware.hpp"
-#include "hardware/timer.h"
-#include "pico/time.h"
-#include "pico/types.h"
 #include "settings.hpp"
 
 #define us_since(time) (absolute_time_diff_us((time), get_absolute_time()))
@@ -36,18 +35,22 @@ Protocol StandbyState::protocol() {
     hardware::set_pump(0.35);
     hardware::set_solenoid(true);
 
+    co_await delay_ms(1000);
+
     float prev_pressure = control::sensors().pressure;
     constexpr auto MAX_PREFILL_TIME_MS = 8000;
     absolute_time_t timeout = make_timeout_time_ms(MAX_PREFILL_TIME_MS);
 
-    float diff;
-    do {
-        co_await next_cycle;
+    while (true) {
+        co_await delay_ms(10);
+
         if (time_reached(timeout)) break;
 
         float curr_pressure = control::sensors().pressure;
-        diff = prev_pressure - curr_pressure;
-    } while (diff < -0.02f || diff > 0.001f);
+        float diff = prev_pressure - curr_pressure;
+        prev_pressure = curr_pressure;
+        if (diff > -0.02f && diff < 0.001f) break;
+    }
 
     hardware::set_pump(0);
     hardware::set_solenoid(false);
