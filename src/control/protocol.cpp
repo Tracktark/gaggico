@@ -1,5 +1,6 @@
 #include "protocol.hpp"
 #include <pico/time.h>
+#include <hardware/watchdog.h>
 #include "control/control.hpp"
 #include "control/impl/state_machine.hpp"
 #include "control/states.hpp"
@@ -36,6 +37,7 @@ void protocol::main_loop() {
     statemachine::enter_state<OffState>();
 
     while (true) {
+        watchdog_update();
         bool should_restart = statemachine::curr_state_check_transitions();
         if (should_restart) continue;
 

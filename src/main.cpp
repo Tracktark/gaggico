@@ -1,5 +1,6 @@
 #include <pico/stdlib.h>
 #include <pico/multicore.h>
+#include <hardware/watchdog.h>
 #include "network/discovery.hpp"
 #include "network/ntp.hpp"
 #include "network/network.hpp"
@@ -23,6 +24,8 @@ int main() {
     hardware::init();
 
     multicore_launch_core1(core1_entry);
+
+    watchdog_enable(1000, true);
 
     while (true) {
         protocol::main_loop();
