@@ -9,6 +9,7 @@
 class SimpleKalmanFilter {
     float err_measure;
     float err_estimate;
+    float init_err_estimate;
     float q;
     float last_estimate = 0;
 
@@ -16,6 +17,7 @@ class SimpleKalmanFilter {
     SimpleKalmanFilter(float err_measure, float err_estimate, float q):
         err_measure(err_measure),
         err_estimate(err_estimate),
+        init_err_estimate(err_estimate),
         q(q) {}
 
     float update(float value) {
@@ -25,5 +27,10 @@ class SimpleKalmanFilter {
         last_estimate = current_estimate;
 
         return current_estimate;
+    }
+
+    void reset() {
+        last_estimate = 0;
+        err_estimate = init_err_estimate;
     }
 };

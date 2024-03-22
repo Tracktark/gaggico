@@ -31,6 +31,7 @@ struct OffState : State<0> {
 
 struct StandbyState : State<1> {
     static void on_enter() {
+        control::reset();
         control::set_boiler_enabled(true);
         control::set_target_temperature(settings::get().brew_temp);
     }

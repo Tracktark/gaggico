@@ -8,7 +8,9 @@ using namespace control;
 
 Sensors _sensors;
 
-PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
+static PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
+static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
+static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.01);
 bool heater_enabled = false;
 
 bool pump_enabled = false;
@@ -38,10 +40,15 @@ void control::set_target_temperature(float temperature) {
     heater_pid.set_target(temperature);
 }
 
+void control::reset() {
+    pressure_filter.reset();
+    temp_filter.reset();
+    heater_pid.reset(_sensors.temperature);
+}
+
 void control::update_sensors() {
     static absolute_time_t pressure_timeout = nil_time;
     if (time_reached(pressure_timeout)) {
-        static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
         float raw_pressure = hardware::read_pressure();
         _sensors.pressure = pressure_filter.update(raw_pressure);
         pressure_timeout = make_timeout_time_ms(10);
@@ -49,7 +56,6 @@ void control::update_sensors() {
 
     static absolute_time_t temp_timeout = nil_time;
     if (time_reached(temp_timeout)) {
-        static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.01);
         float raw_temp = hardware::read_temp();
         _sensors.temperature = temp_filter.update(raw_temp);
         temp_timeout = make_timeout_time_ms(250);
