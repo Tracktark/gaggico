@@ -68,6 +68,32 @@ Protocol BrewState::protocol() {
     co_await delay_ms(settings::get().preinfusion_time * 1000);
 
     control::set_target_pressure(settings::get().brew_pressure);
+
+    float brew_time = settings::get().brew_time;
+    if (brew_time < 0) co_return;
+
+    co_await delay_ms(brew_time * 1000);
+
+    hardware::set_solenoid(false);
+    control::set_pump_enabled(false);
+
+    bool light_on = false;
+    bool pump_on = false;
+    absolute_time_t blink_timeout = nil_time;
+    while (true) {
+        if (time_reached(blink_timeout)) {
+            hardware::set_light(hardware::Steam, light_on);
+            light_on = !light_on;
+            blink_timeout = make_timeout_time_ms(250);
+        }
+
+        if (hardware::get_switch(hardware::Steam) != pump_on) {
+            pump_on = hardware::get_switch(hardware::Steam);
+            hardware::set_solenoid(pump_on);
+            control::set_pump_enabled(pump_on);
+        }
+        co_await next_cycle;
+    }
 }
 
 bool SteamState::check_transitions() {
@@ -80,7 +106,7 @@ bool SteamState::check_transitions() {
 Protocol SteamState::protocol() {
     const control::Sensors& sensors = control::sensors();
 
-    co_await predicate([]() {
+    co_await predicate([] {
         return control::sensors().temperature > 120;
     });
 
@@ -88,7 +114,7 @@ Protocol SteamState::protocol() {
     co_await delay_ms(1500);
     hardware::set_solenoid(false);
 
-    co_await predicate([]() {
+    co_await predicate([] {
         return control::sensors().temperature > 140;
     });
 
