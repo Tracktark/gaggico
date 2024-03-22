@@ -74,8 +74,10 @@ Protocol BrewState::protocol() {
 
     co_await delay_ms(brew_time * 1000);
 
-    hardware::set_solenoid(false);
-    control::set_pump_enabled(false);
+    if (!hardware::get_switch(hardware::Steam)) {
+        hardware::set_solenoid(false);
+        control::set_pump_enabled(false);
+    }
 
     bool light_on = false;
     bool pump_on = false;
