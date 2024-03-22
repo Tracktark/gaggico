@@ -7,6 +7,10 @@ struct Settings {
     float brew_pressure;
     float preinfusion_pressure;
     float preinfusion_time;
+    float brew_time;
+    float kp;
+    float ki;
+    float kd;
 
     void write(u8*& ptr) const;
     void read(u8*& ptr);

@@ -1,7 +1,6 @@
 #pragma once
 #include <algorithm>
 #include <pico/time.h>
-#include <cmath>
 
 class PID {
     float kP, kI, kD;
@@ -45,5 +44,11 @@ public:
         last_value = curr_value;
         last_update_time = get_absolute_time();
         accumulator = 0;
+    }
+
+    void set_params(float kp, float ki, float kd) {
+        this->kP = kp;
+        this->kI = ki;
+        this->kD = kd;
     }
 };

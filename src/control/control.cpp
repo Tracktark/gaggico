@@ -40,6 +40,10 @@ void control::set_target_temperature(float temperature) {
     heater_pid.set_target(temperature);
 }
 
+void control::set_pid_params(float kp, float ki, float kd) {
+    heater_pid.set_params(kp, ki, kd);
+}
+
 void control::reset() {
     pressure_filter.reset();
     temp_filter.reset();
