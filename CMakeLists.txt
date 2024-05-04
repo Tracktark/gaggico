@@ -28,7 +28,8 @@ pico_generate_pio_header(gaggico ${CMAKE_CURRENT_LIST_DIR}/src/hardware/pac.pio)
 
 target_include_directories(gaggico PRIVATE
   src/network
-  src)
+  src
+  lib)
 
 target_link_libraries(gaggico
   pico_stdlib
