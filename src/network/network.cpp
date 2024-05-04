@@ -4,6 +4,7 @@
 #include <lwip/tcp.h>
 #include <lwip/pbuf.h>
 #include "config.hpp"
+#include "impl/message.hpp"
 #include "messages.hpp"
 #include "panic.hpp"
 
@@ -49,23 +50,7 @@ static err_t incoming_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, 
     pbuf_copy_partial(p, in_message_buffer.data(), len, 8);
     u8* msg_data = in_message_buffer.data();
 
-    InMessage* msg;
-    switch (msg_id) {
-    case PowerMessage::ID:
-        msg = new PowerMessage;
-        break;
-    case SettingsUpdateMessage::ID:
-        msg = new SettingsUpdateMessage;
-        break;
-    case GetStatusMessage::ID:
-        msg = new GetStatusMessage;
-        break;
-    }
-
-    msg->read(msg_data);
-    msg->handle();
-
-    delete msg;
+    handle<InMessages>(msg_id, msg_data);
 
     pbuf_free(p);
     return ERR_OK;

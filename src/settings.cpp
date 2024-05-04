@@ -4,7 +4,7 @@
 #include <pico/multicore.h>
 #include "network.hpp"
 #include "network/messages.hpp"
-#include "network/serde.hpp"
+#include "network/impl/serde.hpp"
 using namespace settings;
 
 constexpr auto SETTINGS_FLASH_OFFSET = (1024 * 1024);

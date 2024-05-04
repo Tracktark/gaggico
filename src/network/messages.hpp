@@ -1,8 +1,9 @@
 #pragma once
+#include <variant>
+
 #include "control/protocol.hpp"
 #include "inttypes.hpp"
-#include "ntp.hpp"
-#include "serde.hpp"
+#include "impl/serde.hpp"
 #include "settings.hpp"
 
 struct OutMessage {
@@ -44,40 +45,31 @@ struct SettingsGetMessage : OutMessage {
     }
 };
 
-struct InMessage {
-    virtual void read(u8*& ptr) = 0;
-    virtual void handle() = 0;
-    virtual ~InMessage() {};
-};
-
-struct PowerMessage : InMessage {
-    static constexpr i32 ID = 1;
+struct PowerMessage {
+    static constexpr i32 INCOMING_ID = 1;
     bool status;
 
-    void read(u8*& ptr) override {
-        read_val(ptr, status);
-    }
-
-    void handle() override {
+    void handle() {
         protocol::set_power(status);
     }
 };
 
-struct SettingsUpdateMessage : InMessage {
-    static constexpr i32 ID = 2;
+struct SettingsUpdateMessage {
+    static constexpr i32 INCOMING_ID = 2;
     Settings settings;
 
-    void read(u8*& ptr) override {
+    void read(u8*& ptr) {
         settings.read(ptr);
     }
-    void handle() override {
+    void handle() {
         settings::update(settings);
     }
 };
 
-struct GetStatusMessage : InMessage {
-    static constexpr i32 ID = 3;
+struct GetStatusMessage  {
+    static constexpr i32 INCOMING_ID = 3;
 
-    void read(u8*& ptr) override {}
-    void handle() override;
+    void handle();
 };
+
+using InMessages = std::variant<PowerMessage, SettingsUpdateMessage, GetStatusMessage>;
