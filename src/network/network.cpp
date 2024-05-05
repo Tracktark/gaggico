@@ -15,7 +15,7 @@
 using namespace network;
 
 tcp_pcb* clients[CLIENT_CAPACITY] = {0};
-std::array<u8, 127> out_message_buffer;
+std::array<u8, 127> network::out_message_buffer;
 std::array<u8, 127> in_message_buffer;
 
 static err_t close_connection(struct tcp_pcb* tpcb) {
@@ -50,7 +50,7 @@ static err_t incoming_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, 
     pbuf_copy_partial(p, in_message_buffer.data(), len, 8);
     u8* msg_data = in_message_buffer.data();
 
-    handle<InMessages>(msg_id, msg_data);
+    handle_incoming_msg<InMessages>(msg_id, msg_data);
 
     pbuf_free(p);
     return ERR_OK;
@@ -80,12 +80,8 @@ static err_t new_connection_callback(void* arg, struct tcp_pcb* client_pcb, err_
     return ERR_OK;
 }
 
-void network::send(const OutMessage& msg) {
+void network::send_buffer(u32 msglen) {
     cyw43_arch_lwip_begin();
-    u8* start = out_message_buffer.data() + sizeof(u32);
-    u8* end = start;
-    msg.write(end);
-    u32 msglen = end - start;
     u32 msglen_n = htonl(msglen);
     memcpy(out_message_buffer.data(), &msglen_n, sizeof(u32));
 

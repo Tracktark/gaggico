@@ -2,7 +2,6 @@
 #include "control/protocol.hpp"
 #include "network.hpp"
 #include "ntp.hpp"
-#include "settings.hpp"
 
 void GetStatusMessage::handle() {
     StateChangeMessage msg;

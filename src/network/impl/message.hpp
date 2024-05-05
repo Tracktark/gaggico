@@ -33,7 +33,12 @@ struct handle_impl<std::variant<>, Variant> {
 };
 
 template <typename Variant>
-void handle(int msg_id, u8*& data_ptr) {
+void handle_incoming_msg(int msg_id, u8*& data_ptr) {
     Variant msg;
     handle_impl<Variant, Variant>::handle(msg_id, msg, data_ptr);
 }
+
+template <typename T>
+concept OutgoingMsg = requires(T t) {
+    { T::OUTGOING_ID } -> std::convertible_to<i32>;
+};
