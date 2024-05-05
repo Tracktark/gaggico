@@ -6,6 +6,7 @@
 #include "network/network.hpp"
 #include "control/protocol.hpp"
 #include "hardware/hardware.hpp"
+#include "settings.hpp"
 
 static void core1_entry() {
     multicore_lockout_victim_init();

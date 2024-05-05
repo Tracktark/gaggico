@@ -5,6 +5,7 @@
 #include "control/impl/state_machine.hpp"
 #include "control/states.hpp"
 #include "network/network.hpp"
+#include "network/messages.hpp"
 #include "ntp.hpp"
 
 using namespace protocol;
