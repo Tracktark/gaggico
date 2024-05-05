@@ -77,25 +77,9 @@ void settings::update(Settings& new_settings) {
 }
 
 void Settings::write(u8*& ptr) const {
-    write_val(ptr, brew_temp);
-    write_val(ptr, steam_temp);
-    write_val(ptr, brew_pressure);
-    write_val(ptr, preinfusion_pressure);
-    write_val(ptr, preinfusion_time);
-    write_val(ptr, brew_time);
-    write_val(ptr, kp);
-    write_val(ptr, ki);
-    write_val(ptr, kd);
+    write_struct(*this, ptr);
 }
 
 void Settings::read(u8*& ptr) {
-    read_val(ptr, brew_temp);
-    read_val(ptr, steam_temp);
-    read_val(ptr, brew_pressure);
-    read_val(ptr, preinfusion_pressure);
-    read_val(ptr, preinfusion_time);
-    read_val(ptr, brew_time);
-    read_val(ptr, kp);
-    read_val(ptr, ki);
-    read_val(ptr, kd);
+    read_struct(*this, ptr);
 }
