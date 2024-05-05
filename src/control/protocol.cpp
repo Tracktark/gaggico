@@ -71,7 +71,7 @@ void protocol::network_loop() {
         msg.pressure = s.pressure;
         msg.temp = s.temperature;
         network::send(msg);
-        sleep_ms(250);
+        sleep_ms(statemachine::curr_state_id == BrewState::ID ? 100 : 250);
     }
 }
 
