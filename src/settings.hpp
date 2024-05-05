@@ -2,15 +2,15 @@
 #include "inttypes.hpp"
 
 struct Settings {
-    float brew_temp;
-    float steam_temp;
-    float brew_pressure;
-    float preinfusion_pressure;
-    float preinfusion_time;
-    float brew_time;
-    float kp;
-    float ki;
-    float kd;
+    float brew_temp = 97;
+    float steam_temp = 150;
+    float brew_pressure = 8;
+    float preinfusion_pressure = 2;
+    float preinfusion_time = 0;
+    float brew_time = -1;
+    float kp = 0.087;
+    float ki = 0.00383;
+    float kd = 0.49416;
 
     void write(u8*& ptr) const;
     void read(u8*& ptr);

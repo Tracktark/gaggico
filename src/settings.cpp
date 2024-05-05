@@ -15,17 +15,7 @@ const u8* flash_settings = reinterpret_cast<const u8*>(XIP_BASE + SETTINGS_FLASH
 Settings current_settings;
 
 void load_default() {
-    Settings default_settings {
-        .brew_temp = 97,
-        .steam_temp = 150,
-        .brew_pressure = 8,
-        .preinfusion_pressure = 2,
-        .preinfusion_time = 0,
-        .brew_time = -1,
-        .kp = 0.087,
-        .ki = 0.00383,
-        .kd = 0.49416,
-    };
+    Settings default_settings;
     update(default_settings);
 }
 
