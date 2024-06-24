@@ -10,7 +10,7 @@ Sensors _sensors;
 
 static PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
 static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
-static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.01);
+static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.3);
 bool heater_enabled = false;
 
 bool pump_enabled = false;
