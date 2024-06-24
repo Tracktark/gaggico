@@ -45,8 +45,8 @@ void control::set_pid_params(float kp, float ki, float kd) {
 }
 
 void control::reset() {
-    pressure_filter.reset();
-    temp_filter.reset();
+    pressure_filter.reset(hardware::read_pressure());
+    temp_filter.reset(hardware::read_temp());
     heater_pid.reset(_sensors.temperature);
 }
 
