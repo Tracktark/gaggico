@@ -76,10 +76,10 @@ void settings::update(Settings& new_settings) {
     network::send(SettingsGetMessage());
 }
 
-void Settings::write(u8*& ptr) const {
+void Settings::write_data(u8*& ptr) const {
     write_struct(*this, ptr);
 }
 
-void Settings::read(u8*& ptr) {
+void Settings::read_data(u8*& ptr) {
     read_struct(*this, ptr);
 }

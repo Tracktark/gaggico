@@ -22,7 +22,7 @@ struct SettingsGetMessage {
     static constexpr i32 OUTGOING_ID = 3;
 
     void write(u8*& ptr) const {
-        settings::get().write(ptr);
+        settings::get().write_data(ptr);
     }
 };
 
@@ -40,7 +40,7 @@ struct SettingsUpdateMessage {
     Settings settings;
 
     void read(u8*& ptr) {
-        settings.read(ptr);
+        settings.read_data(ptr);
     }
     void handle() {
         settings::update(settings);

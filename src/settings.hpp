@@ -12,8 +12,8 @@ struct Settings {
     float ki = 0.00383;
     float kd = 0.49416;
 
-    void write(u8*& ptr) const;
-    void read(u8*& ptr);
+    void write_data(u8*& ptr) const;
+    void read_data(u8*& ptr);
 };
 
 namespace settings {
