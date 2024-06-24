@@ -28,9 +28,9 @@ bool StandbyState::check_transitions() {
 }
 
 Protocol StandbyState::protocol() {
-    if (us_since(protocol::times().machine_start) > 10'000)
+    if (us_since(protocol::state().machine_start_time) > 10'000)
         co_return;
-    if (control::sensors().temperature > 80)
+    if (!protocol::state().cold_start)
         co_return;
 
     hardware::set_pump(0.5);

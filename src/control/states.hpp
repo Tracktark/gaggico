@@ -22,7 +22,9 @@ struct OffState : State<0> {
     }
 
     static void on_exit() {
-        protocol::times().machine_start = get_absolute_time();
+        auto& state = protocol::state();
+        state.machine_start_time = get_absolute_time();
+        state.cold_start = hardware::read_temp() < 70;
         hardware::set_light(hardware::Power, true);
     }
 
@@ -49,7 +51,7 @@ struct StandbyState : State<1> {
 
 struct BrewState : State<2> {
     static void on_enter() {
-        protocol::times().brew_start = get_absolute_time();
+        protocol::state().brew_start_time = get_absolute_time();
         hardware::set_solenoid(true);
         control::set_pump_enabled(true);
     }

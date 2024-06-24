@@ -10,19 +10,19 @@
 
 using namespace protocol;
 
-Times _times;
+MachineState _state;
 
 int protocol::get_state_id() {
     return statemachine::curr_state_id;
 }
 
 void protocol::on_state_change(int old_state_id, int new_state_id) {
-    _times.state_change = get_absolute_time();
+    _state.state_change_time = get_absolute_time();
 
     StateChangeMessage msg;
     msg.new_state = new_state_id;
-    msg.state_change_timestamp = ntp::to_timestamp(_times.state_change) / 1000;
-    msg.machine_start_timestamp = ntp::to_timestamp(_times.machine_start) / 1000;
+    msg.state_change_timestamp = ntp::to_timestamp(_state.state_change_time) / 1000;
+    msg.machine_start_timestamp = ntp::to_timestamp(_state.machine_start_time) / 1000;
     network::send(msg);
 }
 
@@ -75,6 +75,6 @@ void protocol::network_loop() {
     }
 }
 
-Times& protocol::times() {
-    return _times;
+MachineState& protocol::state() {
+    return _state;
 }
