@@ -26,6 +26,7 @@ struct OffState : State<0> {
         state.machine_start_time = get_absolute_time();
         state.cold_start = hardware::read_temp() < 70;
         hardware::set_light(hardware::Power, true);
+        control::reset();
     }
 
     static bool check_transitions();
@@ -35,7 +36,6 @@ struct StandbyState : State<1> {
     static void on_enter() {
         const Settings& s = settings::get();
         control::set_pid_params(s.kp, s.ki, s.kd);
-        control::reset();
         control::set_boiler_enabled(true);
         control::set_target_temperature(settings::get().brew_temp);
     }
