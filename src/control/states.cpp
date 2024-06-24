@@ -28,16 +28,17 @@ bool StandbyState::check_transitions() {
 }
 
 Protocol StandbyState::protocol() {
-    if (us_since(protocol::times().machine_start) > 1'000'000)
+    if (us_since(protocol::times().machine_start) > 10'000)
+        co_return;
+    if (control::sensors().temperature > 80)
         co_return;
 
-    hardware::set_pump(0.35);
+    hardware::set_pump(0.5);
     hardware::set_solenoid(true);
 
-    co_await delay_ms(1000);
+    co_await delay_ms(200);
 
-    float prev_pressure = control::sensors().pressure;
-    constexpr auto MAX_PREFILL_TIME_MS = 8000;
+    constexpr auto MAX_PREFILL_TIME_MS = 12000;
     absolute_time_t timeout = make_timeout_time_ms(MAX_PREFILL_TIME_MS);
 
     while (true) {
@@ -45,10 +46,8 @@ Protocol StandbyState::protocol() {
 
         if (time_reached(timeout)) break;
 
-        float curr_pressure = control::sensors().pressure;
-        float diff = prev_pressure - curr_pressure;
-        prev_pressure = curr_pressure;
-        if (diff > -0.02f && diff < 0.001f) break;
+        float pressure = control::sensors().pressure;
+        if (pressure > 1.20f) break;
     }
 
     hardware::set_pump(0);
