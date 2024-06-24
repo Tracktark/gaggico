@@ -107,13 +107,15 @@ bool SteamState::check_transitions() {
 Protocol SteamState::protocol() {
     const control::Sensors& sensors = control::sensors();
 
-    co_await predicate([] {
-        return control::sensors().temperature > 120;
-    });
+    if (sensors.temperature < 120) {
+        co_await predicate([] {
+            return control::sensors().temperature > 120;
+        });
+        hardware::set_solenoid(true);
+        co_await delay_ms(1500);
+        hardware::set_solenoid(false);
+    }
 
-    hardware::set_solenoid(true);
-    co_await delay_ms(1500);
-    hardware::set_solenoid(false);
 
     co_await predicate([] {
         return control::sensors().temperature > 140;
