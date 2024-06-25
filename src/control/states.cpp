@@ -78,16 +78,10 @@ Protocol BrewState::protocol() {
         control::set_pump_enabled(false);
     }
 
-    bool light_on = false;
     bool pump_on = false;
-    absolute_time_t blink_timeout = nil_time;
-    while (true) {
-        if (time_reached(blink_timeout)) {
-            hardware::set_light(hardware::Steam, light_on);
-            light_on = !light_on;
-            blink_timeout = make_timeout_time_ms(250);
-        }
+    control::set_light_blink(250);
 
+    while (true) {
         if (hardware::get_switch(hardware::Steam) != pump_on) {
             pump_on = hardware::get_switch(hardware::Steam);
             hardware::set_solenoid(pump_on);
@@ -136,11 +130,8 @@ Protocol SteamState::protocol() {
         }
     }
 
-    while (true) {
-        hardware::set_light(hardware::Steam, false);
-        co_await delay_ms(250);
-        hardware::set_light(hardware::Steam, true);
-        co_await delay_ms(250);
+    control::set_light_blink(250);
+}
     }
 
 }

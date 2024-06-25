@@ -12,10 +12,13 @@ Sensors _sensors;
 static PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
 static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
 static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.3);
-bool heater_enabled = false;
 
-bool pump_enabled = false;
-float target_pressure = false;
+static bool heater_enabled = false;
+static bool pump_enabled = false;
+static float target_pressure = false;
+static u32 blink_light_period = 0;
+static absolute_time_t blink_timeout = nil_time;
+static bool blink_light_on = false;
 
 void control::set_boiler_enabled(bool enabled) {
     heater_enabled = enabled;
@@ -43,6 +46,13 @@ void control::set_target_temperature(float temperature) {
 
 void control::set_pid_params(float kp, float ki, float kd) {
     heater_pid.set_params(kp, ki, kd);
+}
+
+void control::set_light_blink(u32 delay_ms) {
+    hardware::set_light(hardware::Steam, false);
+    blink_light_period = delay_ms;
+    blink_light_on = false;
+    blink_timeout = nil_time;
 }
 
 void control::reset() {
@@ -87,12 +97,17 @@ void control::update() {
         hardware::set_light(hardware::Brew, temp_close_enough && (!state.cold_start || five_min_since_start));
     }
 
-
     if (pump_enabled) {
         float curr_pressure = _sensors.pressure;
 
         float pump_value = getPumpPct(curr_pressure, target_pressure);
         hardware::set_pump(pump_value);
+    }
+
+    if (blink_light_period > 0 && time_reached(blink_timeout)) {
+        blink_light_on = !blink_light_on;
+        hardware::set_light(hardware::Steam, blink_light_on);
+        blink_timeout = make_timeout_time_ms(blink_light_period);
     }
 }
 

@@ -59,7 +59,7 @@ struct BrewState : State<2> {
     static void on_exit() {
         control::set_pump_enabled(false);
         hardware::set_solenoid(false);
-        hardware::set_light(hardware::Steam, false);
+        control::set_light_blink(0);
     }
 
     static bool check_transitions();
@@ -72,8 +72,8 @@ struct SteamState : State<3> {
     }
 
     static void on_exit() {
-        hardware::set_light(hardware::Steam, false);
         hardware::set_solenoid(false);
+        control::set_light_blink(0);
     }
 
     static bool check_transitions();
