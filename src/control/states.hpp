@@ -79,3 +79,19 @@ struct SteamState : State<3> {
     static bool check_transitions();
     static Protocol protocol();
 };
+
+struct BackflushState : State<4> {
+    static inline bool complete = false;
+
+    static void on_enter() {
+        complete = false;
+    }
+
+    static void on_exit() {
+        control::set_pump_enabled(false);
+        hardware::set_solenoid(false);
+        control::set_light_blink(0);
+    }
+    static bool check_transitions();
+    static Protocol protocol();
+};

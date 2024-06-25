@@ -132,6 +132,51 @@ Protocol SteamState::protocol() {
 
     control::set_light_blink(250);
 }
-    }
 
+bool BackflushState::check_transitions() {
+    if (complete) {
+        statemachine::change_state<StandbyState>();
+        return true;
+    }
+    return false;
+}
+
+Protocol BackflushState::protocol() {
+    for (int j = 0; j < 2; j++) {
+        control::set_light_blink(1000);
+
+        for (int i = 0; i < 5; i++) {
+            control::set_pump_enabled(true);
+            hardware::set_solenoid(true);
+            control::set_target_pressure(settings::get().brew_pressure);
+
+            co_await delay_ms(1000);
+
+            float last_pressure = control::sensors().pressure;
+
+            while (true) {
+                co_await delay_ms(100);
+
+                float pressure = control::sensors().pressure;
+                if (pressure - last_pressure < 0) break;
+                last_pressure = pressure;
+            }
+
+            co_await delay_ms(1000);
+
+            control::set_pump_enabled(false);
+            hardware::set_solenoid(false);
+            control::set_target_pressure(settings::get().brew_pressure);
+
+            co_await delay_ms(4000);
+        }
+
+        control::set_light_blink(250);
+        if (j == 0) {
+            co_await predicate([]() {return hardware::get_switch(hardware::Steam);});
+        } else {
+            co_await predicate([]() {return !hardware::get_switch(hardware::Steam);});
+        }
+    }
+    complete = true;
 }

@@ -2,6 +2,7 @@
 #include <variant>
 
 #include "control/protocol.hpp"
+#include "control/states.hpp"
 #include "inttypes.hpp"
 #include "settings.hpp"
 
@@ -53,4 +54,16 @@ struct GetStatusMessage  {
     void handle();
 };
 
-using InMessages = std::variant<PowerMessage, SettingsUpdateMessage, GetStatusMessage>;
+struct BackflushMessage  {
+    static constexpr i32 INCOMING_ID = 4;
+
+    void handle() {
+        if (statemachine::curr_state_id == StandbyState::ID) {
+            statemachine::change_state<BackflushState>();
+        } else if (statemachine::curr_state_id == BackflushState::ID) {
+            statemachine::change_state<StandbyState>();
+        }
+    }
+};
+
+using InMessages = std::variant<PowerMessage, SettingsUpdateMessage, GetStatusMessage, BackflushMessage>;
