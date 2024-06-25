@@ -83,7 +83,7 @@ void control::update() {
         bool temp_close_enough = fabs(heater_pid.get_target() - curr_temp) < 1;
         auto& state = protocol::state();
         bool five_min_since_start =
-            absolute_time_diff_us(state.machine_start_time, get_absolute_time()) > 5 * 60 * 1'000'000;
+            absolute_time_diff_us(state.machine_start_time, get_absolute_time()) > 7 * 60 * 1'000'000;
         hardware::set_light(hardware::Brew, temp_close_enough && (!state.cold_start || five_min_since_start));
     }
 
