@@ -138,6 +138,9 @@ float hardware::read_temp() {
         panic(Error::SENSOR_ERROR);
     }
     last_value = data * 0.25;
+    if (last_value > 300) {
+        panic(Error::SENSOR_ERROR);
+    }
     critical_section_exit(&temp_cs);
     return last_value;
 #endif
