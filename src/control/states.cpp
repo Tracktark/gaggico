@@ -168,7 +168,7 @@ Protocol BackflushState::protocol() {
             hardware::set_solenoid(false);
             control::set_target_pressure(settings::get().brew_pressure);
 
-            co_await delay_ms(4000);
+            co_await delay_ms(10000);
         }
 
         control::set_light_blink(250);
