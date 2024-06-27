@@ -28,7 +28,7 @@ bool StandbyState::check_transitions() {
 }
 
 Protocol StandbyState::protocol() {
-    if (us_since(protocol::state().machine_start_time) > 10'000)
+    if (us_since(protocol::state().machine_start_time) > 100'000)
         co_return;
     if (!protocol::state().cold_start)
         co_return;
