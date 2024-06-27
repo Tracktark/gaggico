@@ -19,16 +19,16 @@ void GetStatusMessage::handle() {
 }
 
 void MaintenanceMessage::handle() {
-    if (statemachine::curr_state_id == StandbyState::ID) {
+    if (protocol::get_state_id() == StandbyState::ID) {
         if (type == 1) { // Backflush
-            statemachine::change_state<BackflushState>();
+            protocol::schedule_state_change<BackflushState>();
         } else if (type == 2) { // Descale
-            statemachine::change_state<DescaleState>();
+            protocol::schedule_state_change<DescaleState>();
         }
-    } else if (statemachine::curr_state_id == BackflushState::ID ||
-               statemachine::curr_state_id == DescaleState::ID) {
+    } else if (protocol::get_state_id() == BackflushState::ID ||
+               protocol::get_state_id() == DescaleState::ID) {
         if (type == 0) { // Stop
-            statemachine::change_state<StandbyState>();
+            protocol::schedule_state_change<StandbyState>();
         }
     }
 }

@@ -86,10 +86,7 @@ struct SteamState : State<3> {
 };
 
 struct BackflushState : State<4> {
-    static inline bool complete;
-
     static void on_enter() {
-        complete = false;
         states::maintenance_msg.cycle = 1;
         states::maintenance_msg.stage = 0;
     }
@@ -99,15 +96,11 @@ struct BackflushState : State<4> {
         hardware::set_solenoid(false);
         control::set_light_blink(0);
     }
-    static bool check_transitions();
     static Protocol protocol();
 };
 
 struct DescaleState : State<5> {
-    static inline bool complete;
-
     static void on_enter() {
-        complete = false;
         states::maintenance_msg.cycle = 1;
         states::maintenance_msg.stage = 0;
         control::set_boiler_enabled(false);
@@ -120,6 +113,7 @@ struct DescaleState : State<5> {
         control::set_light_blink(0);
         hardware::set_solenoid(false);
     }
-    static bool check_transitions();
     static Protocol protocol();
 };
+
+using States = std::tuple<OffState, StandbyState, BrewState, SteamState, BackflushState, DescaleState>;

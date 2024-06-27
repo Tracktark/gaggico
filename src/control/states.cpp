@@ -136,14 +136,6 @@ Protocol SteamState::protocol() {
     control::set_light_blink(250);
 }
 
-bool BackflushState::check_transitions() {
-    if (complete) {
-        statemachine::change_state<StandbyState>();
-        return true;
-    }
-    return false;
-}
-
 Protocol BackflushState::protocol() {
     for (int j = 0; j < 2; j++) {
         control::set_light_blink(1000);
@@ -189,15 +181,7 @@ Protocol BackflushState::protocol() {
             co_await predicate([]() {return !hardware::get_switch(hardware::Steam);});
         }
     }
-    complete = true;
-}
-
-bool DescaleState::check_transitions() {
-    if (complete) {
-        statemachine::change_state<StandbyState>();
-        return true;
-    }
-    return false;
+    protocol::schedule_state_change<StandbyState>();
 }
 
 Protocol DescaleState::protocol() {
@@ -262,5 +246,5 @@ Protocol DescaleState::protocol() {
         hardware::set_solenoid(false);
     }
 
-    complete = true;
+    protocol::schedule_state_change<StandbyState>();
 }

@@ -16,8 +16,17 @@ MachineState _state;
 auto_init_mutex(core1_alive_mutex);
 static volatile bool core1_alive = false;
 
+auto_init_mutex(next_state_mutex);
+static volatile int next_state = -1;
+
 int protocol::get_state_id() {
     return statemachine::curr_state_id;
+}
+
+void protocol::schedule_state_change_by_id(int id) {
+    mutex_enter_blocking(&next_state_mutex);
+    next_state = id;
+    mutex_exit(&next_state_mutex);
 }
 
 void protocol::on_state_change(int old_state_id, int new_state_id) {
@@ -32,9 +41,9 @@ void protocol::on_state_change(int old_state_id, int new_state_id) {
 
 void protocol::set_power(bool on) {
     if (statemachine::curr_state_id == OffState::ID && on) {
-        statemachine::change_state<StandbyState>();
+        schedule_state_change<StandbyState>();
     } else if (statemachine::curr_state_id != OffState::ID && !on){
-        statemachine::change_state<OffState>();
+        schedule_state_change<OffState>();
     }
 }
 
@@ -49,6 +58,18 @@ void protocol::main_loop() {
                 core1_alive = false;
             }
             mutex_exit(&core1_alive_mutex);
+        }
+
+        // Process scheduled state change
+        if (mutex_try_enter(&next_state_mutex, nullptr)) {
+            if (next_state >= 0) {
+                statemachine::change_state_by_id<States>(next_state);
+                next_state = -1;
+                mutex_exit(&next_state_mutex);
+                continue;
+            } else {
+                mutex_exit(&next_state_mutex);
+            }
         }
 
         bool should_restart = statemachine::curr_state_check_transitions();

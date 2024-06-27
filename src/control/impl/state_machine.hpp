@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <tuple>
 #include "coroutine.hpp"
 #include "control/protocol.hpp"
 
@@ -58,4 +59,27 @@ struct State {
     static Protocol protocol() {co_return;};
 };
 
+template <typename States>
+struct change_state_by_id_impl;
+
+template <StateC T, StateC... Rest>
+struct change_state_by_id_impl<std::tuple<T, Rest...>> {
+    static void exec(int id) {
+        if (T::ID == id) {
+            change_state<T>();
+        } else {
+            change_state_by_id_impl<std::tuple<Rest...>>::exec(id);
+        }
+    }
+};
+
+template <>
+struct change_state_by_id_impl<std::tuple<>> {
+    static void exec(int id) {}
+};
+
+template <typename States>
+void change_state_by_id(int id) {
+    change_state_by_id_impl<States>::exec(id);
+}
 };
