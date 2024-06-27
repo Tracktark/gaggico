@@ -12,6 +12,12 @@ void GetStatusMessage::handle() {
     network::send(msg);
     network::send(SettingsGetMessage());
 
+    if (protocol::get_state_id() == BackflushState::ID ||
+        protocol::get_state_id() == DescaleState::ID) {
+        network::send(states::maintenance_msg);
+    }
+}
+
 void MaintenanceMessage::handle() {
     if (statemachine::curr_state_id == StandbyState::ID) {
         if (type == 1) { // Backflush

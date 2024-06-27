@@ -26,6 +26,12 @@ struct SettingsGetMessage {
     }
 };
 
+struct MaintenanceStatusMessage {
+    static constexpr i32 OUTGOING_ID = 4;
+    i32 stage;
+    i32 cycle;
+};
+
 struct PowerMessage {
     static constexpr i32 INCOMING_ID = 1;
     bool status;

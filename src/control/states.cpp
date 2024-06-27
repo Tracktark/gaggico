@@ -2,11 +2,14 @@
 #include <pico/time.h>
 #include "control.hpp"
 #include "impl/coroutine.hpp"
+#include "network.hpp"
 #include "protocol.hpp"
 #include "hardware/hardware.hpp"
 #include "settings.hpp"
 
 #define us_since(time) (absolute_time_diff_us((time), get_absolute_time()))
+
+MaintenanceStatusMessage states::maintenance_msg;
 
 bool OffState::check_transitions() {
     if (hardware::is_power_just_pressed()) {
@@ -144,8 +147,12 @@ bool BackflushState::check_transitions() {
 Protocol BackflushState::protocol() {
     for (int j = 0; j < 2; j++) {
         control::set_light_blink(1000);
+        states::maintenance_msg.stage = j;
 
         for (int i = 0; i < 5; i++) {
+            states::maintenance_msg.cycle = i + 1;
+            network::send(states::maintenance_msg);
+
             control::set_pump_enabled(true);
             hardware::set_solenoid(true);
             control::set_target_pressure(settings::get().brew_pressure);
@@ -171,6 +178,10 @@ Protocol BackflushState::protocol() {
             co_await delay_ms(10000);
         }
 
+        states::maintenance_msg.stage = 2;
+        states::maintenance_msg.cycle = 0;
+        network::send(states::maintenance_msg);
+
         control::set_light_blink(250);
         if (j == 0) {
             co_await predicate([]() {return hardware::get_switch(hardware::Steam);});
@@ -192,6 +203,10 @@ bool DescaleState::check_transitions() {
 Protocol DescaleState::protocol() {
     for (int cycle = 0; cycle < 7; cycle++) {
         // Cleaning
+        states::maintenance_msg.stage = 0;
+        states::maintenance_msg.cycle = cycle+1;
+        network::send(states::maintenance_msg);
+
         u32 total_time = 0;
         u32 wait_time = cycle < 6 ? 30'000 : 10'000;
         while (total_time < wait_time) {
@@ -205,12 +220,18 @@ Protocol DescaleState::protocol() {
         }
 
         // Soaking
+        states::maintenance_msg.stage = 1;
+        network::send(states::maintenance_msg);
         hardware::set_pump(0);
         co_await delay_ms(cycle == 0 ? 1000 * 60 * 20 : 1000 * 60 * 3);
     }
 
     // Rinsing
     for (int rinse_cycle = 0; rinse_cycle < 8; rinse_cycle++) {
+        states::maintenance_msg.cycle = rinse_cycle+1;
+        states::maintenance_msg.stage = 3;
+        network::send(states::maintenance_msg);
+
         // Wait for tank refill
         control::set_light_blink(250);
         bool initial = hardware::get_switch(hardware::Brew);
@@ -219,6 +240,8 @@ Protocol DescaleState::protocol() {
         }
 
         // Rinsing
+        states::maintenance_msg.stage = 2;
+        network::send(states::maintenance_msg);
         control::set_light_blink(1000);
 
         hardware::set_solenoid(rinse_cycle % 2 == 1);

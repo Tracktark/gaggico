@@ -6,10 +6,15 @@
 #include "hardware/hardware.hpp"
 #include "impl/coroutine.hpp"
 #include "impl/state_machine.hpp"
+#include "messages.hpp"
 #include "settings.hpp"
 
 template <int id>
 using State = statemachine::State<id>;
+
+namespace states {
+extern MaintenanceStatusMessage maintenance_msg;
+};
 
 struct OffState : State<0> {
     static void on_enter() {
@@ -85,6 +90,8 @@ struct BackflushState : State<4> {
 
     static void on_enter() {
         complete = false;
+        states::maintenance_msg.cycle = 1;
+        states::maintenance_msg.stage = 0;
     }
 
     static void on_exit() {
@@ -101,6 +108,8 @@ struct DescaleState : State<5> {
 
     static void on_enter() {
         complete = false;
+        states::maintenance_msg.cycle = 1;
+        states::maintenance_msg.stage = 0;
         control::set_boiler_enabled(false);
         control::set_light_blink(1000);
         hardware::set_solenoid(false);
