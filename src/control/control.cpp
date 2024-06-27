@@ -9,16 +9,23 @@ using namespace control;
 
 Sensors _sensors;
 
-static PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
+// Sensor update vars
 static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
 static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.3);
+static absolute_time_t pressure_read_timeout = nil_time;
+static absolute_time_t temp_read_timeout = nil_time;
 
-static bool heater_enabled = false;
-static bool pump_enabled = false;
-static float target_pressure = false;
+// Blink vars
 static u32 blink_light_period = 0;
 static absolute_time_t blink_timeout = nil_time;
 static bool blink_light_on = false;
+
+// Update vars
+static bool heater_enabled = false;
+static bool pump_enabled = false;
+static absolute_time_t heater_update_timeout = nil_time;
+static float target_pressure = false;
+static PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
 
 void control::set_boiler_enabled(bool enabled) {
     heater_enabled = enabled;
@@ -62,25 +69,22 @@ void control::reset() {
 }
 
 void control::update_sensors() {
-    static absolute_time_t pressure_timeout = nil_time;
-    if (time_reached(pressure_timeout)) {
+    if (time_reached(pressure_read_timeout)) {
         float raw_pressure = hardware::read_pressure();
         _sensors.pressure = pressure_filter.update(raw_pressure);
-        pressure_timeout = make_timeout_time_ms(10);
+        pressure_read_timeout = make_timeout_time_ms(10);
     }
 
-    static absolute_time_t temp_timeout = nil_time;
-    if (time_reached(temp_timeout)) {
+    if (time_reached(temp_read_timeout)) {
         float raw_temp = hardware::read_temp();
         _sensors.temperature = temp_filter.update(raw_temp);
-        temp_timeout = make_timeout_time_ms(250);
+        temp_read_timeout = make_timeout_time_ms(250);
     }
 
 }
 
 void control::update() {
     if (heater_enabled) {
-        static absolute_time_t heater_update_timeout = nil_time;
         if (!time_reached(heater_update_timeout))
             return;
         heater_update_timeout = make_timeout_time_ms(250);

@@ -31,9 +31,10 @@ constexpr auto SOLENOID_PIN = 9;
 constexpr auto LIGHT_PIN_BASE = 16;
 constexpr auto SWITCH_PIN_BASE = 19;
 
-absolute_time_t switch_transition_time[3] = {nil_time};
-
-PSM pump_psm(PUMP_DIM_PIN, 100);
+static absolute_time_t switch_transition_time[3] = {nil_time};
+static absolute_time_t next_temp_read_time = nil_time;
+static critical_section_t temp_cs;
+static PSM pump_psm(PUMP_DIM_PIN, 100);
 
 static void gpio_irq_handler(uint gpio, uint32_t event_mask) {
     if (gpio >= SWITCH_PIN_BASE && gpio < SWITCH_PIN_BASE + 3) {
@@ -45,7 +46,6 @@ static void gpio_irq_handler(uint gpio, uint32_t event_mask) {
     }
 }
 
-critical_section_t temp_cs;
 
 void hardware::init() {
     // Temp sensor
@@ -115,14 +115,13 @@ float hardware::read_temp() {
 #else
     critical_section_enter_blocking(&temp_cs);
 
-    static absolute_time_t next_read_time = nil_time;
     static float last_value = 0;
 
-    if (!time_reached(next_read_time)) {
+    if (!time_reached(next_temp_read_time)) {
         critical_section_exit(&temp_cs);
         return last_value;
     }
-    next_read_time = make_timeout_time_ms(TEMP_READ_INTERVAL);
+    next_temp_read_time = make_timeout_time_ms(TEMP_READ_INTERVAL);
 
     gpio_put(TEMP_CS_PIN, 0);
     asm volatile("nop \n nop \n nop");
