@@ -81,7 +81,7 @@ struct SteamState : State<3> {
 };
 
 struct BackflushState : State<4> {
-    static inline bool complete = false;
+    static inline bool complete;
 
     static void on_enter() {
         complete = false;
@@ -91,6 +91,25 @@ struct BackflushState : State<4> {
         control::set_pump_enabled(false);
         hardware::set_solenoid(false);
         control::set_light_blink(0);
+    }
+    static bool check_transitions();
+    static Protocol protocol();
+};
+
+struct DescaleState : State<5> {
+    static inline bool complete;
+
+    static void on_enter() {
+        complete = false;
+        control::set_boiler_enabled(false);
+        control::set_light_blink(1000);
+        hardware::set_solenoid(false);
+    }
+
+    static void on_exit() {
+        hardware::set_pump(0);
+        control::set_light_blink(0);
+        hardware::set_solenoid(false);
     }
     static bool check_transitions();
     static Protocol protocol();

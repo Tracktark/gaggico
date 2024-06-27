@@ -180,3 +180,64 @@ Protocol BackflushState::protocol() {
     }
     complete = true;
 }
+
+bool DescaleState::check_transitions() {
+    if (complete) {
+        statemachine::change_state<StandbyState>();
+        return true;
+    }
+    return false;
+}
+
+Protocol DescaleState::protocol() {
+    for (int cycle = 0; cycle < 7; cycle++) {
+        // Cleaning
+        u32 total_time = 0;
+        u32 wait_time = cycle < 6 ? 30'000 : 10'000;
+        while (total_time < wait_time) {
+            if (!hardware::get_switch(hardware::Steam)) {
+                hardware::set_pump(1);
+                total_time += 100;
+            } else {
+                hardware::set_pump(0);
+            }
+            co_await delay_ms(100);
+        }
+
+        // Soaking
+        hardware::set_pump(0);
+        co_await delay_ms(cycle == 0 ? 1000 * 60 * 20 : 1000 * 60 * 3);
+    }
+
+    // Rinsing
+    for (int rinse_cycle = 0; rinse_cycle < 8; rinse_cycle++) {
+        // Wait for tank refill
+        control::set_light_blink(250);
+        bool initial = hardware::get_switch(hardware::Brew);
+        while (hardware::get_switch(hardware::Brew) == initial) {
+            co_await next_cycle;
+        }
+
+        // Rinsing
+        control::set_light_blink(1000);
+
+        hardware::set_solenoid(rinse_cycle % 2 == 1);
+        u32 total_time = 0;
+        while (total_time < 200'000) { // Time to empty entire tank
+            if (!hardware::get_switch(hardware::Steam)) {
+                hardware::set_pump(1);
+                total_time += 100;
+            } else {
+                hardware::set_pump(0);
+            }
+            if (hardware::get_switch(hardware::Brew) == initial) {
+                break;
+            }
+            co_await delay_ms(100);
+        }
+        hardware::set_pump(0);
+        hardware::set_solenoid(false);
+    }
+
+    complete = true;
+}
