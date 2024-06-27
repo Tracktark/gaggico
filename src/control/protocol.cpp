@@ -1,5 +1,6 @@
 #include "protocol.hpp"
 #include <pico/time.h>
+#include <pico/mutex.h>
 #include <hardware/watchdog.h>
 #include "control/control.hpp"
 #include "control/impl/state_machine.hpp"
@@ -11,6 +12,9 @@
 using namespace protocol;
 
 MachineState _state;
+
+auto_init_mutex(core1_alive_mutex);
+static volatile bool core1_alive = false;
 
 int protocol::get_state_id() {
     return statemachine::curr_state_id;
@@ -38,7 +42,15 @@ void protocol::main_loop() {
     statemachine::enter_state<OffState>();
 
     while (true) {
-        watchdog_update();
+        // Only update watchdog if core1 is also alive
+        if (mutex_try_enter(&core1_alive_mutex, nullptr)) {
+            if (core1_alive) {
+                watchdog_update();
+                core1_alive = false;
+            }
+            mutex_exit(&core1_alive_mutex);
+        }
+
         bool should_restart = statemachine::curr_state_check_transitions();
         if (should_restart) continue;
 
@@ -66,7 +78,12 @@ void protocol::main_loop() {
 void protocol::network_loop() {
     SensorStatusMessage msg;
     while (true) {
+        mutex_enter_blocking(&core1_alive_mutex);
+        core1_alive = true;
+        mutex_exit(&core1_alive_mutex);
+
         if (statemachine::curr_state_id == OffState::ID) continue;
+
         const control::Sensors& s = control::sensors();
         msg.pressure = s.pressure;
         msg.temp = s.temperature;
