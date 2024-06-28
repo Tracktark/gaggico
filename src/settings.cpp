@@ -73,7 +73,7 @@ void settings::update(Settings& new_settings) {
     }
     restore_interrupts(save);
 
-    network::send(SettingsGetMessage());
+    network::enqueue_message(SettingsGetMessage());
 }
 
 void Settings::write_data(u8*& ptr) const {

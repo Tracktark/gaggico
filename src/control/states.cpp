@@ -143,7 +143,7 @@ Protocol BackflushState::protocol() {
 
         for (int i = 0; i < 5; i++) {
             states::maintenance_msg.cycle = i + 1;
-            network::send(states::maintenance_msg);
+            network::enqueue_message(states::maintenance_msg);
 
             control::set_pump_enabled(true);
             hardware::set_solenoid(true);
@@ -172,7 +172,7 @@ Protocol BackflushState::protocol() {
 
         states::maintenance_msg.stage = 2;
         states::maintenance_msg.cycle = 0;
-        network::send(states::maintenance_msg);
+        network::enqueue_message(states::maintenance_msg);
 
         control::set_light_blink(250);
         if (j == 0) {
@@ -189,7 +189,7 @@ Protocol DescaleState::protocol() {
         // Cleaning
         states::maintenance_msg.stage = 0;
         states::maintenance_msg.cycle = cycle+1;
-        network::send(states::maintenance_msg);
+        network::enqueue_message(states::maintenance_msg);
 
         u32 total_time = 0;
         u32 wait_time = cycle < 6 ? 30'000 : 10'000;
@@ -205,7 +205,7 @@ Protocol DescaleState::protocol() {
 
         // Soaking
         states::maintenance_msg.stage = 1;
-        network::send(states::maintenance_msg);
+        network::enqueue_message(states::maintenance_msg);
         hardware::set_pump(0);
         co_await delay_ms(cycle == 0 ? 1000 * 60 * 20 : 1000 * 60 * 3);
     }
@@ -214,7 +214,7 @@ Protocol DescaleState::protocol() {
     for (int rinse_cycle = 0; rinse_cycle < 8; rinse_cycle++) {
         states::maintenance_msg.cycle = rinse_cycle+1;
         states::maintenance_msg.stage = 3;
-        network::send(states::maintenance_msg);
+        network::enqueue_message(states::maintenance_msg);
 
         // Wait for tank refill
         control::set_light_blink(250);
@@ -225,7 +225,7 @@ Protocol DescaleState::protocol() {
 
         // Rinsing
         states::maintenance_msg.stage = 2;
-        network::send(states::maintenance_msg);
+        network::enqueue_message(states::maintenance_msg);
         control::set_light_blink(1000);
 
         hardware::set_solenoid(rinse_cycle % 2 == 1);

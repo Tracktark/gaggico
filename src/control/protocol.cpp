@@ -37,7 +37,7 @@ void protocol::on_state_change(int old_state_id, int new_state_id) {
     msg.new_state = new_state_id;
     msg.state_change_timestamp = ntp::to_timestamp(_state.state_change_time) / 1000;
     msg.machine_start_timestamp = ntp::to_timestamp(_state.machine_start_time) / 1000;
-    network::send(msg);
+    network::enqueue_message(msg);
 }
 
 void protocol::set_power(bool on) {
@@ -114,13 +114,15 @@ void protocol::network_loop() {
         core1_alive = true;
         mutex_exit(&core1_alive_mutex);
 
-        if (statemachine::curr_state_id == OffState::ID) continue;
+        network::process_outgoing_messages();
 
-        const control::Sensors& s = control::sensors();
-        msg.pressure = s.pressure;
-        msg.temp = s.temperature;
-        network::send(msg);
-        sleep_ms(statemachine::curr_state_id == BrewState::ID ? 100 : 250);
+        if (get_state_id() != OffState::ID && time_reached(sensor_message_time)) {
+            sensor_message_time = make_timeout_time_ms(get_state_id() == BrewState::ID ? 100 : 250);
+            const control::Sensors& s = control::sensors();
+            msg.pressure = s.pressure;
+            msg.temp = s.temperature;
+            network::enqueue_message(msg);
+        }
     }
 }
 

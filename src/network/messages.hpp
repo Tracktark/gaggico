@@ -32,6 +32,8 @@ struct MaintenanceStatusMessage {
     i32 cycle;
 };
 
+using OutMessages = std::variant<StateChangeMessage, SensorStatusMessage, SettingsGetMessage, MaintenanceStatusMessage>;
+
 struct PowerMessage {
     static constexpr i32 INCOMING_ID = 1;
     bool status;
