@@ -45,6 +45,6 @@ target_compile_definitions(gaggico PRIVATE CURRENT_YEAR=${CURRENT_YEAR})
 # target_compile_definitions(gaggico PRIVATE DEBUG_NO_HARDWARE)
 
 pico_enable_stdio_usb(gaggico 1)
-pico_enable_stdio_uart(gaggico 1)
+pico_enable_stdio_uart(gaggico 0)
 
 pico_add_extra_outputs(gaggico)
