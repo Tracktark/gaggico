@@ -15,6 +15,7 @@ MachineState _state;
 
 auto_init_mutex(core1_alive_mutex);
 static volatile bool core1_alive = false;
+static volatile bool core1_watchdog_enabled = false;
 
 auto_init_mutex(next_state_mutex);
 static volatile int next_state = -1;
@@ -53,7 +54,7 @@ void protocol::main_loop() {
     while (true) {
         // Only update watchdog if core1 is also alive
         if (mutex_try_enter(&core1_alive_mutex, nullptr)) {
-            if (core1_alive) {
+            if (!core1_watchdog_enabled || core1_alive) {
                 watchdog_update();
                 core1_alive = false;
             }
@@ -98,7 +99,17 @@ void protocol::main_loop() {
 
 void protocol::network_loop() {
     SensorStatusMessage msg;
+    absolute_time_t sensor_message_time = nil_time;
+
+    // Enable watchdog
+    mutex_enter_blocking(&core1_alive_mutex);
+    core1_watchdog_enabled = true;
+    mutex_exit(&core1_alive_mutex);
+
     while (true) {
+        sleep_ms(10);
+
+        // Update watchdog
         mutex_enter_blocking(&core1_alive_mutex);
         core1_alive = true;
         mutex_exit(&core1_alive_mutex);
