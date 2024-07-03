@@ -235,6 +235,10 @@ void network::enqueue_message(const OutMessages& msg) {
     LOG("Enqueuing message, queue size: %u\n", out_message_queue.size());
 }
 
+usize network::message_queue_size() {
+    return out_message_queue.size();
+}
+
 void network::wifi_init() {
     if (cyw43_arch_init_with_country(COUNTRY_CODE)) {
         panic(Error::WIFI_INIT_FAILED);

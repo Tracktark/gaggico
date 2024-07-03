@@ -118,10 +118,13 @@ void protocol::network_loop() {
 
         if (get_state_id() != OffState::ID && time_reached(sensor_message_time)) {
             sensor_message_time = make_timeout_time_ms(get_state_id() == BrewState::ID ? 100 : 250);
-            const control::Sensors& s = control::sensors();
-            msg.pressure = s.pressure;
-            msg.temp = s.temperature;
-            network::enqueue_message(msg);
+
+            if (network::message_queue_size() < 5) {
+                const control::Sensors& s = control::sensors();
+                msg.pressure = s.pressure;
+                msg.temp = s.temperature;
+                network::enqueue_message(msg);
+            }
         }
     }
 }
