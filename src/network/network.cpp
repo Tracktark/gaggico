@@ -35,7 +35,7 @@ static Client clients[CLIENT_CAPACITY] = {0};
 
 static u8 out_message_buffer[OUT_MESSAGE_BUFFER_CAP];
 static isize out_message_len = -1;
-static Queue<OutMessages, 10> out_message_queue;
+static Queue<OutMessages, 20> out_message_queue;
 
 static err_t close_connection(tcp_pcb* pcb) {
     err_t err = tcp_close(pcb);
