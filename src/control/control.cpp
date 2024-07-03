@@ -1,5 +1,6 @@
 #include "control.hpp"
 #include <pico/time.h>
+#include "hardware/timer.h"
 #include "impl/kalman_filter.hpp"
 #include "impl/pid.hpp"
 #include "hardware/hardware.hpp"
@@ -14,6 +15,8 @@ static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
 static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.3);
 static absolute_time_t pressure_read_timeout = nil_time;
 static absolute_time_t temp_read_timeout = nil_time;
+static absolute_time_t close_enough_time = nil_time;
+static bool last_close_enough = false;
 
 // Blink vars
 static u32 blink_light_period = 0;
@@ -95,10 +98,14 @@ void control::update() {
         hardware::set_heater(heater_value);
 
         bool temp_close_enough = fabs(heater_pid.get_target() - curr_temp) < 1;
+        if (temp_close_enough != last_close_enough) {
+            last_close_enough = temp_close_enough;
+            close_enough_time = make_timeout_time_ms(30000);
+        }
+
         auto& state = protocol::state();
-        bool five_min_since_start =
-            absolute_time_diff_us(state.machine_start_time, get_absolute_time()) > 7 * 60 * 1'000'000;
-        hardware::set_light(hardware::Brew, temp_close_enough && (!state.cold_start || five_min_since_start));
+
+        hardware::set_light(hardware::Brew, temp_close_enough && time_reached(close_enough_time));
     }
 
     if (pump_enabled) {
