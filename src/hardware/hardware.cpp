@@ -21,12 +21,12 @@ constexpr auto TEMP_READ_INTERVAL = 250;
 constexpr auto PRESSURE_PIN = 26;
 
 #define DIMMER_PIO pio0
-constexpr auto ZERO_CROSS_PIN = 10;
-constexpr auto HEAT_DIM_PIN = 11;
-constexpr auto PUMP_DIM_PIN = 12;
+constexpr auto ZERO_CROSS_PIN = 7;
+constexpr auto HEAT_DIM_PIN = 8;
+constexpr auto PUMP_DIM_PIN = 9;
 constexpr auto HEAT_PIO_SM = 0;
 
-constexpr auto SOLENOID_PIN = 9;
+constexpr auto SOLENOID_PIN = 6;
 
 constexpr auto LIGHT_PIN_BASE = 16;
 constexpr auto SWITCH_PIN_BASE = 19;
@@ -148,7 +148,7 @@ float hardware::read_temp() {
 float hardware::read_pressure() {
     uint16_t value = adc_read();
 
-    return (value - 410) / 273.f;
+    return ((float)value - 409.6f) / 273.07f;
 }
 
 void hardware::set_light(Switch which, bool active) {
