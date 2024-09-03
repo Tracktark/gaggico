@@ -1,4 +1,5 @@
 #include "states.hpp"
+#include <cmath>
 #include <pico/time.h>
 #include "control.hpp"
 #include "impl/coroutine.hpp"
@@ -102,38 +103,53 @@ bool SteamState::check_transitions() {
     return false;
 }
 Protocol SteamState::protocol() {
-    const control::Sensors& sensors = control::sensors();
-
-    if (sensors.temperature < 120) {
-        co_await predicate([] {
-            return control::sensors().temperature > 120;
-        });
-        hardware::set_solenoid(true);
-        co_await delay_ms(1500);
-        hardware::set_solenoid(false);
-    }
-
-
+    hardware::set_heater(1);
     co_await predicate([] {
-        return control::sensors().temperature > 140;
+        return control::sensors().temperature > settings::get().steam_temp;
     });
-
     hardware::set_light(hardware::Steam, true);
 
+    const control::Sensors& sensors = control::sensors();
+    const Settings &settings = settings::get();
+    constexpr float PRESSURE_TARGET = 4;
+
+    bool valve_open = false;
     float max_pressure = sensors.pressure;
+    float min_pressure = sensors.pressure;
+
     while (true) {
-        co_await delay_ms(50);
-
-        if (sensors.pressure > max_pressure) {
-            max_pressure = sensors.pressure;
+        // Detect valve open
+        if (!valve_open) {
+            if (sensors.pressure > max_pressure && sensors.pressure < 6) {
+                max_pressure = sensors.pressure;
+            }
+            if (max_pressure - sensors.pressure > 1) {
+                valve_open = true;
+                hardware::set_pump(0.05);
+                control::set_light_blink(250);
+                min_pressure = sensors.pressure;
+            }
+        } else {
+            if (sensors.pressure < min_pressure) {
+                min_pressure = sensors.pressure;
+            }
+            if (sensors.pressure - min_pressure > 1) {
+                hardware::set_pump(0);
+                valve_open = false;
+                control::set_light_blink(0);
+                hardware::set_light(hardware::Steam, true);
+                max_pressure = sensors.pressure;
+            }
         }
 
-        if (max_pressure - sensors.pressure > 2) {
-            break;
+        if (sensors.temperature < settings.steam_temp) {
+            hardware::set_heater(1);
+        } else {
+            hardware::set_heater(0);
         }
+
+        co_await next_cycle;
     }
-
-    control::set_light_blink(250);
 }
 
 Protocol BackflushState::protocol() {

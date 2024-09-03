@@ -48,6 +48,7 @@ struct StandbyState : State<1> {
     static void on_exit() {
         hardware::set_pump(0);
         hardware::set_solenoid(false);
+        control::set_light_blink(0);
     }
 
     static bool check_transitions();
@@ -74,10 +75,13 @@ struct BrewState : State<2> {
 struct SteamState : State<3> {
     static void on_enter() {
         control::set_target_temperature(settings::get().steam_temp);
+        control::set_pump_enabled(false);
+        control::set_boiler_enabled(false);
     }
 
     static void on_exit() {
-        hardware::set_solenoid(false);
+        hardware::set_pump(0);
+        hardware::set_heater(0);
         control::set_light_blink(0);
     }
 
