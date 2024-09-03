@@ -6,6 +6,7 @@ struct MachineState {
     absolute_time_t machine_start_time;
     absolute_time_t state_change_time;
     absolute_time_t brew_start_time;
+    absolute_time_t last_loop_time;
     bool cold_start;
 };
 

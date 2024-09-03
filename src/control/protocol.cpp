@@ -1,4 +1,5 @@
 #include "protocol.hpp"
+#include <cstdio>
 #include <pico/time.h>
 #include <pico/mutex.h>
 #include <hardware/watchdog.h>
@@ -7,7 +8,7 @@
 #include "control/states.hpp"
 #include "network/network.hpp"
 #include "network/messages.hpp"
-#include "ntp.hpp"
+#include "network/ntp.hpp"
 
 using namespace protocol;
 
@@ -50,8 +51,16 @@ void protocol::set_power(bool on) {
 
 void protocol::main_loop() {
     statemachine::enter_state<OffState>();
+    state().last_loop_time = get_absolute_time();
 
     while (true) {
+        absolute_time_t now = get_absolute_time();
+        uint32_t loop_time = absolute_time_diff_us(state().last_loop_time, now);
+        if (loop_time > 10'000) {
+            printf("Loop time longer than 10 ms! %.02f ms\n", loop_time / 1000.0);
+        }
+        state().last_loop_time = now;
+
         // Only update watchdog if core1 is also alive
         if (mutex_try_enter(&core1_alive_mutex, nullptr)) {
             if (!core1_watchdog_enabled || core1_alive) {
