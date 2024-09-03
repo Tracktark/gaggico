@@ -6,6 +6,7 @@
 #include <pico/sync.h>
 #include <pico/time.h>
 #include "pac.pio.h"
+#include "hx711.pio.h"
 #include "config.hpp"
 #include "panic.hpp"
 #include "psm.hpp"
@@ -31,10 +32,35 @@ constexpr auto SOLENOID_PIN = 6;
 constexpr auto LIGHT_PIN_BASE = 16;
 constexpr auto SWITCH_PIN_BASE = 19;
 
+#define SCALE_PIO pio1
+constexpr auto SCALE_CLK_PIN = 22;
+constexpr auto SCALE_DOUT_L_PIN = 14;
+constexpr auto SCALE_DOUT_R_PIN = 15;
+constexpr auto SCALE_SM_L = 0;
+constexpr auto SCALE_SM_R = 1;
+constexpr auto SCALE_MULT_L = 2189.f;
+constexpr auto SCALE_MULT_R = -2273.f;
+constexpr auto SCALE_TARE_STEPS = 10;
+
+constexpr auto SD_SCK_PIN = 10;
+constexpr auto SD_TX_PIN = 11;
+constexpr auto SD_RX_PIN = 12;
+constexpr auto SD_CS_PIN = 13;
+
 static absolute_time_t switch_transition_time[3] = {nil_time};
 static absolute_time_t next_temp_read_time = nil_time;
 static critical_section_t temp_cs;
 static PSM pump_psm(PUMP_DIM_PIN, 100);
+
+static struct ScaleState {
+    int32_t offset_l;
+    int32_t offset_r;
+    int32_t tare_step = 0; // Setting to 0 means scales are tared automatically on startup
+    int32_t avg_l = 0;
+    int32_t avg_r = 0;
+    float last_weight;
+    bool connected = false;
+} scale_state;
 
 static void gpio_irq_handler(uint gpio, uint32_t event_mask) {
     if (gpio >= SWITCH_PIN_BASE && gpio < SWITCH_PIN_BASE + 3) {
@@ -93,6 +119,10 @@ void hardware::init() {
         gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
     }
 
+    // Scales
+    hx711_init(SCALE_PIO, SCALE_SM_L, SCALE_SM_R, SCALE_CLK_PIN,
+               SCALE_DOUT_L_PIN, SCALE_DOUT_R_PIN);
+
     gpio_set_irq_callback(gpio_irq_handler);
     irq_set_enabled(IO_IRQ_BANK0, true);
 }
@@ -150,6 +180,35 @@ float hardware::read_pressure() {
 
     return ((float)value - 409.6f) / 273.07f;
 }
+
+float hardware::read_weight() {
+    int32_t val_l, val_r;
+    if (hx711_get(SCALE_PIO, SCALE_SM_L, SCALE_SM_R, &val_l, &val_r, &scale_state.connected)) {
+        float weight_l = (val_l - scale_state.offset_l) / SCALE_MULT_L;
+        float weight_r = (val_r - scale_state.offset_r) / SCALE_MULT_R;
+        scale_state.last_weight = weight_l + weight_r;
+        if (scale_state.tare_step >= 0) {
+            scale_state.avg_l += val_l;
+            scale_state.avg_r += val_r;
+            scale_state.tare_step++;
+        }
+        if (scale_state.tare_step >= SCALE_TARE_STEPS) {
+            scale_state.tare_step = -1;
+            scale_state.offset_l = scale_state.avg_l / SCALE_TARE_STEPS;
+            scale_state.offset_r = scale_state.avg_r / SCALE_TARE_STEPS;
+        }
+    }
+    return scale_state.last_weight;
+}
+
+void hardware::scale_start_tare() {
+    scale_state.tare_step = 0;
+    scale_state.avg_l = 0;
+    scale_state.avg_r = 0;
+}
+
+bool hardware::is_scale_connected() { return scale_state.connected; }
+bool hardware::is_scale_taring() { return scale_state.tare_step >= 0; }
 
 void hardware::set_light(Switch which, bool active) {
     gpio_put(LIGHT_PIN_BASE + which, active);

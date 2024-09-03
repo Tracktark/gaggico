@@ -25,6 +25,7 @@ add_executable(gaggico
   src/main.cpp)
 
 pico_generate_pio_header(gaggico ${CMAKE_CURRENT_LIST_DIR}/src/hardware/pac.pio)
+pico_generate_pio_header(gaggico ${CMAKE_CURRENT_LIST_DIR}/src/hardware/hx711.pio)
 
 target_include_directories(gaggico PRIVATE
   src/network

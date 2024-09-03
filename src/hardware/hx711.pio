@@ -1,0 +1,112 @@
+.pio_version 0
+
+.program hx711_1
+.side_set 1
+.in 32 left
+.fifo rx
+
+.wrap_target
+    wait 0 pin 0         side 0
+    irq wait 4           side 0
+    ; Both state machines are synchronized after this point
+    set x 24             side 1
+bitloop:
+    in pins, 1           side 0
+    jmp x-- bitloop      side 1
+    push noblock         side 0
+    nop                  side 1
+    nop                  side 0
+.wrap
+
+.program hx711_2
+.fifo rx
+.in 32 left
+
+.wrap_target
+    wait 0 pin 0
+    wait 1 irq 4
+    ; Both state machines are synchronized after this point
+    set x 24
+bitloop:
+    in pins, 1
+    jmp x-- bitloop
+    push noblock
+    nop ; Probably not necessary, used just for syncing the wrap with the other program
+    nop
+.wrap
+
+
+% c-sdk {
+#include "hardware/clocks.h"
+static inline bool hx711_init(PIO pio, uint sm1, uint sm2, uint clk_pin, uint d1_pin, uint d2_pin) {
+    int offset1 = pio_add_program(pio, &hx711_1_program);
+    int offset2 = pio_add_program(pio, &hx711_2_program);
+    if (offset1 < 0 || offset2 < 0) {
+        return false;
+    }
+    
+    pio_gpio_init(pio, clk_pin);
+    pio_gpio_init(pio, d1_pin);
+    pio_gpio_init(pio, d2_pin);
+
+    pio_sm_set_consecutive_pindirs(pio, sm1, clk_pin, 1, true);    
+    pio_sm_set_consecutive_pindirs(pio, sm1, d1_pin, 1, false);    
+    pio_sm_set_consecutive_pindirs(pio, sm2, d2_pin, 1, false);
+    gpio_pull_up(d1_pin);
+    gpio_pull_up(d2_pin);
+
+    float div = clock_get_hz(clk_sys) * 0.000001; // 1us per clock cycle
+    pio_sm_config c1 = hx711_1_program_get_default_config(offset1);
+    sm_config_set_sideset_pins(&c1, clk_pin);
+    sm_config_set_in_pins(&c1, d1_pin);
+    sm_config_set_clkdiv(&c1, div);
+    pio_sm_init(pio, sm1, offset1, &c1);
+
+    pio_sm_config c2 = hx711_2_program_get_default_config(offset2);
+    sm_config_set_in_pins(&c2, d2_pin);
+    sm_config_set_clkdiv(&c2, div);
+    pio_sm_init(pio, sm2, offset2, &c2);
+
+    pio_sm_set_enabled(pio, sm1, true);
+    pio_sm_set_enabled(pio, sm2, true);
+    return true;
+}
+
+static inline int32_t sign_extend_24_to_32_bit(int32_t x) {
+    int32_t m = 1 << 23;
+    return (x ^ m) - m;
+}
+
+static inline bool hx711_get(PIO pio, uint sm1, uint sm2, int32_t* val1, int32_t* val2, bool* connected) {
+    if (pio_sm_is_rx_fifo_empty(pio, sm1) || pio_sm_is_rx_fifo_empty(pio, sm2)) {
+        return false;
+    }
+    // TODO: Test if debug flags are 0 or 1 when set
+    uint32_t data_dropped_mask = (1 << (PIO_FDEBUG_RXSTALL_LSB + sm1)) | (1 << (PIO_FDEBUG_RXSTALL_LSB + sm2));
+    if (pio->fdebug & data_dropped_mask) { // Latest data was dropped due to full queue, we need to wait for new data
+        pio_sm_clear_fifos(pio, sm1);
+        pio_sm_clear_fifos(pio, sm2);
+        pio->fdebug |= data_dropped_mask;
+        *val1 = pio_sm_get_blocking(pio, sm1);
+        *val2 = pio_sm_get_blocking(pio, sm2);
+    } else { // Latest data is still in the queue, simply take the last element
+        while (!pio_sm_is_rx_fifo_empty(pio, sm1)) {
+            *val1 = pio_sm_get_blocking(pio, sm1);
+        }
+        while (!pio_sm_is_rx_fifo_empty(pio, sm2)) {
+            *val2 = pio_sm_get_blocking(pio, sm2);
+        }
+    }
+    *val1 &= 0xFFFFFF;
+    *val2 &= 0xFFFFFF;
+    if (*val1 == 0xFFFFFF || *val2 == 0xFFFFFF) {
+        // Assume the extreme value will never be reached naturally, and probably means that scales are disconnected
+        *connected = false;
+        return false;
+    }
+    *connected = true;
+    *val1 = sign_extend_24_to_32_bit(*val1);
+    *val2 = sign_extend_24_to_32_bit(*val2);
+    return true;
+}
+%}
