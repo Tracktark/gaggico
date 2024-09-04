@@ -5,7 +5,6 @@
 #include <hardware/pio.h>
 #include <pico/sync.h>
 #include <pico/time.h>
-#include "pac.pio.h"
 #include "hx711.pio.h"
 #include "config.hpp"
 #include "panic.hpp"
@@ -21,11 +20,9 @@ constexpr auto TEMP_READ_INTERVAL = 250;
 
 constexpr auto PRESSURE_PIN = 26;
 
-#define DIMMER_PIO pio0
 constexpr auto ZERO_CROSS_PIN = 7;
 constexpr auto HEAT_DIM_PIN = 8;
 constexpr auto PUMP_DIM_PIN = 9;
-constexpr auto HEAT_PIO_SM = 0;
 
 constexpr auto SOLENOID_PIN = 6;
 
@@ -51,6 +48,7 @@ static absolute_time_t switch_transition_time[3] = {nil_time};
 static absolute_time_t next_temp_read_time = nil_time;
 static critical_section_t temp_cs;
 static PSM pump_psm(PUMP_DIM_PIN, 100);
+static PSM heater_psm(HEAT_DIM_PIN, 100);
 
 static struct ScaleState {
     int32_t offset_l;
@@ -69,6 +67,7 @@ static void gpio_irq_handler(uint gpio, uint32_t event_mask) {
     }
     if (gpio == ZERO_CROSS_PIN && (event_mask & GPIO_IRQ_EDGE_RISE) > 0) {
         pump_psm.zero_crossing_handler();
+        heater_psm.zero_crossing_handler();
     }
 }
 
@@ -93,8 +92,6 @@ void hardware::init() {
     static_assert(PRESSURE_PIN >= 26 && PRESSURE_PIN <= 29, "ADC only on pins 26-29");
 
     // Dimmers
-    uint offset = pio_add_program(DIMMER_PIO, &pac_program);
-    pac_pio_init(DIMMER_PIO, HEAT_PIO_SM, offset, HEAT_DIM_PIN, ZERO_CROSS_PIN);
     set_heater(0);
     set_pump(0);
     gpio_set_irq_enabled(ZERO_CROSS_PIN, GPIO_IRQ_EDGE_RISE, true);
@@ -128,7 +125,7 @@ void hardware::init() {
 }
 
 void hardware::set_heater(float val) {
-    pac_pio_set(DIMMER_PIO, HEAT_PIO_SM, MAINS_FREQUENCY_HZ, val);
+    heater_psm.set(val * 100);
 }
 
 void hardware::set_pump(float val) {
