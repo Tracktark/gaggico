@@ -11,12 +11,13 @@
 #include "messages.hpp"
 #include "panic.hpp"
 
-// #define LOG(...) printf(__VA_ARGS__)
-#define LOG(...)
+// #define DEBUG(...) printf(__VA_ARGS__)
+#define DEBUG(...)
 
 #ifndef COUNTRY_CODE
 #define COUNTRY_CODE PICO_CYW43_ARCH_DEFAULT_COUNTRY_CODE
 #endif
+#define MAGIC "gaco"
 
 using namespace network;
 
@@ -28,6 +29,7 @@ struct Client {
     usize recved_len;
     usize written_len;
     usize acked_len;
+    u8 recved_magic;
     u8 message_buffer[IN_MESSAGE_BUFFER_CAP];
 };
 
@@ -75,24 +77,45 @@ static err_t recv_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_
     u32 offset = 0;
 
     while (p->tot_len - offset > 0) {
-        if (client.current_msg_len == -1) {
+        if (client.recved_magic < sizeof(MAGIC) - 1) {
+            if (try_receive(client, p, 1, offset)) {
+                client.recved_len = 0;
+                if (client.message_buffer[0] == MAGIC[client.recved_magic]) {
+                    DEBUG("Received byte %c of magic\n", MAGIC[client.recved_magic]);
+                    client.recved_magic++;
+                } else if (client.message_buffer[0] == MAGIC[0]) {
+                    DEBUG("Reset magic to 1st byte\n");
+                    client.recved_magic = 1;
+                } else {
+                    DEBUG("Received non-magic byte: %02X\n", client.message_buffer[0]);
+                    client.recved_magic = 0;
+                }
+            }
+        } else if (client.current_msg_len == -1) {
+            DEBUG("Receiving message length\n");
             if (try_receive(client, p, sizeof(u32), offset)) {
                 client.recved_len = 0;
-                client.current_msg_len = ntohl(reinterpret_cast<u32*>(client.message_buffer)[0]);
+                DEBUG("Parsing msg length\n");
+                memcpy(&client.current_msg_len, client.message_buffer, sizeof(client.current_msg_len));
+                client.current_msg_len = ntohl(client.current_msg_len);
+                DEBUG("Received message length: %d\n", client.current_msg_len);
             }
         } else {
             if (try_receive(client, p, client.current_msg_len, offset)) {
                 u32 msg_len = client.current_msg_len - 4;
                 client.recved_len = 0;
                 client.current_msg_len = -1;
+                client.recved_magic = 0;
 
-                u32 msg_id = ntohl(reinterpret_cast<u32*>(client.message_buffer)[0]);
+                u32 msg_id;
+                memcpy(&msg_id, client.message_buffer, sizeof(msg_id));
+                msg_id = ntohl(msg_id);
                 u8* msg_data = client.message_buffer + sizeof(u32);
-                LOG("Received msg %u from %u\n", msg_id, (&client - clients));
+                DEBUG("Received msg %u from %u\n", msg_id, (&client - clients));
                 for (int i = 0; i < msg_len; i++) {
-                    LOG("%02X ", msg_data[i]);
+                    DEBUG("%02X ", msg_data[i]);
                 }
-                LOG("\n");
+                DEBUG("\n");
                 handle_incoming_msg<InMessages>(msg_id, msg_data);
             }
         }
@@ -112,7 +135,7 @@ static err_t sent_callback(void* arg, tcp_pcb* tpcb, u16 len) {
     Client& client = *static_cast<Client*>(arg);
     u32 id = (&client - clients);
     client.acked_len += len;
-    LOG("Client %u received %u out of %u bytes\n", id, client.acked_len, out_message_len);
+    DEBUG("Client %u received %u out of %u bytes\n", id, client.acked_len, out_message_len);
     return ERR_OK;
 }
 
@@ -135,6 +158,7 @@ static err_t new_connection_callback(void* arg, struct tcp_pcb* client_pcb, err_
     }
     client->pcb = client_pcb;
     client->current_msg_len = -1;
+    client->recved_magic = 0;
     client->recved_len = 0;
     client->acked_len = 0;
     client->written_len = 0;
@@ -186,7 +210,7 @@ static void try_send() {
     }
 
     if (done_sending) {
-        LOG("End message\n");
+        DEBUG("End message\n");
         out_message_queue.pop_blocking();
         out_message_len = -1;
     }
@@ -197,7 +221,9 @@ static void try_send() {
 static void serialize_message() {
     const OutMessages& msg = out_message_queue.peek();
 
-    u8* start = out_message_buffer + sizeof(u32);
+    memcpy(out_message_buffer, MAGIC, sizeof(MAGIC)-1);
+
+    u8 *start = out_message_buffer + sizeof(u32) + sizeof(MAGIC)-1;
     u8* end = start;
 
     std::visit([&end](auto&& msg) {
@@ -207,7 +233,7 @@ static void serialize_message() {
     }, msg);
 
     u32 msglen_n = htonl(end-start);
-    memcpy(out_message_buffer, &msglen_n, sizeof(u32));
+    memcpy(out_message_buffer + sizeof(MAGIC)-1, &msglen_n, sizeof(u32));
     out_message_len = end-out_message_buffer;
 }
 
@@ -217,7 +243,7 @@ void network::process_outgoing_messages() {
         return;
     }
     if (out_message_queue.size() > 0) { // Sending a new message
-        LOG("Begin message\n");
+        DEBUG("Begin message\n");
         for (usize i = 0; i < CLIENT_CAPACITY; i++) {
             if (clients[i].pcb == nullptr) continue;
             clients[i].acked_len = 0;
@@ -232,7 +258,7 @@ void network::enqueue_message(const OutMessages& msg) {
         panic(Error::MESSAGE_QUEUE_FULL);
     }
 
-    LOG("Enqueuing message, queue size: %u\n", out_message_queue.size());
+    DEBUG("Enqueuing message, queue size: %u\n", out_message_queue.size());
 }
 
 usize network::message_queue_size() {
