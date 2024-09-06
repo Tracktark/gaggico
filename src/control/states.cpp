@@ -51,7 +51,7 @@ Protocol StandbyState::protocol() {
         if (time_reached(timeout)) break;
 
         float pressure = control::sensors().pressure;
-        if (pressure > 1.20f) break;
+        if (pressure > 0.42f) break;
     }
 
     hardware::set_pump(0);
