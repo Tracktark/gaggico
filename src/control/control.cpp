@@ -84,6 +84,8 @@ void control::update_sensors() {
         temp_read_timeout = make_timeout_time_ms(250);
     }
 
+    _sensors.weight = hardware::read_weight();
+    _sensors.scale_connected = hardware::is_scale_connected();
 }
 
 void control::update() {

@@ -16,6 +16,7 @@ struct SensorStatusMessage {
     static constexpr i32 OUTGOING_ID = 2;
     float temp;
     float pressure;
+    float weight;
 };
 
 struct SettingsGetMessage {

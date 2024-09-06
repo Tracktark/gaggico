@@ -1,4 +1,5 @@
 #include "hardware.hpp"
+#include <cstdio>
 #include <hardware/gpio.h>
 #include <hardware/spi.h>
 #include <hardware/adc.h>
@@ -29,7 +30,7 @@ constexpr auto SOLENOID_PIN = 6;
 constexpr auto LIGHT_PIN_BASE = 16;
 constexpr auto SWITCH_PIN_BASE = 19;
 
-#define SCALE_PIO pio1
+#define SCALE_PIO pio0
 constexpr auto SCALE_CLK_PIN = 22;
 constexpr auto SCALE_DOUT_L_PIN = 14;
 constexpr auto SCALE_DOUT_R_PIN = 15;

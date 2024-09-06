@@ -1,4 +1,5 @@
 #include "protocol.hpp"
+#include <cmath>
 #include <cstdio>
 #include <pico/time.h>
 #include <pico/mutex.h>
@@ -132,6 +133,7 @@ void protocol::network_loop() {
                 const control::Sensors& s = control::sensors();
                 msg.pressure = s.pressure;
                 msg.temp = s.temperature;
+                msg.weight = s.scale_connected ? s.weight : NAN;
                 network::enqueue_message(msg);
             }
         }

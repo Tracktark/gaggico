@@ -56,6 +56,8 @@ Protocol StandbyState::protocol() {
 
     hardware::set_pump(0);
     hardware::set_solenoid(false);
+    co_await delay_ms(2000);
+    hardware::scale_start_tare();
 }
 
 bool BrewState::check_transitions() {
@@ -82,17 +84,7 @@ Protocol BrewState::protocol() {
         control::set_pump_enabled(false);
     }
 
-    bool pump_on = false;
     control::set_light_blink(250);
-
-    while (true) {
-        if (hardware::get_switch(hardware::Steam) != pump_on) {
-            pump_on = hardware::get_switch(hardware::Steam);
-            hardware::set_solenoid(pump_on);
-            control::set_pump_enabled(pump_on);
-        }
-        co_await next_cycle;
-    }
 }
 
 bool SteamState::check_transitions() {

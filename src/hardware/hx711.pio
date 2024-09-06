@@ -44,16 +44,16 @@ static inline bool hx711_init(PIO pio, uint sm1, uint sm2, uint clk_pin, uint d1
     if (offset1 < 0 || offset2 < 0) {
         return false;
     }
-    
+
     pio_gpio_init(pio, clk_pin);
     pio_gpio_init(pio, d1_pin);
     pio_gpio_init(pio, d2_pin);
 
-    pio_sm_set_consecutive_pindirs(pio, sm1, clk_pin, 1, true);    
-    pio_sm_set_consecutive_pindirs(pio, sm1, d1_pin, 1, false);    
+    pio_sm_set_consecutive_pindirs(pio, sm1, clk_pin, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm1, d1_pin, 1, false);
     pio_sm_set_consecutive_pindirs(pio, sm2, d2_pin, 1, false);
-    gpio_pull_up(d1_pin);
-    gpio_pull_up(d2_pin);
+    gpio_pull_down(d1_pin);
+    gpio_pull_down(d2_pin);
 
     float div = clock_get_hz(clk_sys) * 0.000001; // 1us per clock cycle
     pio_sm_config c1 = hx711_1_program_get_default_config(offset1);
@@ -81,7 +81,6 @@ static inline bool hx711_get(PIO pio, uint sm1, uint sm2, int32_t* val1, int32_t
     if (pio_sm_is_rx_fifo_empty(pio, sm1) || pio_sm_is_rx_fifo_empty(pio, sm2)) {
         return false;
     }
-    // TODO: Test if debug flags are 0 or 1 when set
     uint32_t data_dropped_mask = (1 << (PIO_FDEBUG_RXSTALL_LSB + sm1)) | (1 << (PIO_FDEBUG_RXSTALL_LSB + sm2));
     if (pio->fdebug & data_dropped_mask) { // Latest data was dropped due to full queue, we need to wait for new data
         pio_sm_clear_fifos(pio, sm1);
@@ -99,7 +98,7 @@ static inline bool hx711_get(PIO pio, uint sm1, uint sm2, int32_t* val1, int32_t
     }
     *val1 &= 0xFFFFFF;
     *val2 &= 0xFFFFFF;
-    if (*val1 == 0xFFFFFF || *val2 == 0xFFFFFF) {
+    if (*val1 == 0 && *val2 == 0) {
         // Assume the extreme value will never be reached naturally, and probably means that scales are disconnected
         *connected = false;
         return false;
