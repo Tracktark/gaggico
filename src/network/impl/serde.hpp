@@ -1,5 +1,6 @@
 #pragma once
 #include <bit>
+#include <cstring>
 #include <lwip/def.h>
 #include <boost/pfr.hpp>
 #include "inttypes.hpp"
@@ -10,20 +11,31 @@ template <typename T>
 inline void write_val(u8*& ptr, T value) {
     if constexpr (sizeof(T) == 8) {
         if constexpr (std::endian::native == std::endian::little) {
-            *reinterpret_cast<u32*>(ptr) = htonl(*(reinterpret_cast<u32*>(&value) + 1));
-            *(reinterpret_cast<u32*>(ptr) + 1) = htonl(*reinterpret_cast<u32*>(&value));
+            u32 val1, val2;
+            memcpy(&val1, &value, sizeof(u32));
+            memcpy(&val2, reinterpret_cast<u32 *>(&value) + 1, sizeof(u32));
+            val1 = htonl(val1);
+            val2 = htonl(val2);
+            memcpy(ptr, &val2, sizeof(u32));
+            memcpy(ptr + sizeof(u32), &val1, sizeof(u32));
         } else {
-            *reinterpret_cast<u64*>(ptr) = *reinterpret_cast<u64*>(&value);
+            memcpy(ptr, &value, sizeof(u64));
         }
         ptr += 8;
     } else if constexpr (sizeof(T) == 4) {
-        *reinterpret_cast<u32*>(ptr) = htonl(*reinterpret_cast<u32*>(&value));
-        ptr += 4;
+        u32 val;
+        memcpy(&val, &value, sizeof(value));
+        val = htonl(val);
+        memcpy(ptr, &val, sizeof(val));
+        ptr += sizeof(val);
     } else if constexpr (sizeof(T) == 2) {
-        *reinterpret_cast<u16*>(ptr) = htons(*reinterpret_cast<u16*>(&value));
-        ptr += 2;
+        u16 val;
+        memcpy(&val, &value, sizeof(value));
+        val = htonl(val);
+        memcpy(ptr, &val, sizeof(val));
+        ptr += sizeof(val);
     } else if constexpr (sizeof(T) == 1) {
-        *ptr = *reinterpret_cast<u8*>(&value);
+        memcpy(ptr, &value, 1);
         ptr++;
     } else {
         static_assert(dependent_false<T>, "write_val not implemented for this type");
@@ -33,13 +45,19 @@ inline void write_val(u8*& ptr, T value) {
 template <typename T>
 inline void read_val(u8*& ptr, T& value) {
     if constexpr (sizeof(T) == 4) {
-        *reinterpret_cast<u32*>(&value) = ntohl(*reinterpret_cast<u32*>(ptr));
-        ptr += 4;
+        u32 val;
+        memcpy(&val, ptr, sizeof(T));
+        val = ntohl(val);
+        memcpy(&value, &val, sizeof(T));
+        ptr += sizeof(T);
     } else if constexpr (sizeof(T) == 2) {
-        *reinterpret_cast<u16*>(&value) = ntohs(*reinterpret_cast<u16*>(ptr));
-        ptr += 2;
+        u32 val;
+        memcpy(&val, ptr, sizeof(T));
+        val = ntohs(val);
+        memcpy(&value, &val, sizeof(T));
+        ptr += sizeof(T);
     } else if constexpr (sizeof(T) == 1) {
-        *reinterpret_cast<u8*>(&value) = *ptr;
+        memcpy(&value, ptr, 1);
         ptr++;
     } else {
         static_assert(dependent_false<T>, "read_val not implemented for this type");
