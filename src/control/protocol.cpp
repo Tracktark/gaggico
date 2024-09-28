@@ -10,6 +10,7 @@
 #include "network/network.hpp"
 #include "network/messages.hpp"
 #include "network/ntp.hpp"
+#include "hardware/sd_card.hpp"
 
 using namespace protocol;
 
@@ -116,6 +117,8 @@ void protocol::network_loop() {
     core1_watchdog_enabled = true;
     mutex_exit(&core1_alive_mutex);
 
+    bool sd_initialized = false;
+
     while (true) {
         sleep_ms(10);
 
@@ -125,6 +128,15 @@ void protocol::network_loop() {
         mutex_exit(&core1_alive_mutex);
 
         network::process_outgoing_messages();
+
+        if (get_state_id() != OffState::ID && !sd_initialized) {
+            sd_initialized = true;
+            sd_card::init();
+        }
+        if (get_state_id() == OffState::ID && sd_initialized) {
+            sd_initialized = false;
+            sd_card::deinit();
+        }
 
         if (get_state_id() != OffState::ID && time_reached(sensor_message_time)) {
             sensor_message_time = make_timeout_time_ms(get_state_id() == BrewState::ID ? 100 : 250);

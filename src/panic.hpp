@@ -6,6 +6,7 @@ enum class Error {
     SENSOR_ERROR,
     COROUTINE_TOO_BIG,
     MESSAGE_QUEUE_FULL,
+    SD_CARD_ERROR,
 };
 
 [[noreturn]] void panic(Error error);

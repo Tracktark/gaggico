@@ -11,16 +11,19 @@ set(PICO_BOARD pico_w)
 
 pico_sdk_init()
 
+add_subdirectory(lib/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico/src)
+
 add_executable(gaggico
   src/network/discovery.cpp
+  src/network/messages.cpp
+  src/network/ntp.cpp
   src/network/network.cpp
-  src/panic.cpp
   src/hardware/hardware.cpp
+  src/hardware/sd_card.cpp
   src/control/control.cpp
   src/control/protocol.cpp
   src/control/states.cpp
-  src/network/messages.cpp
-  src/network/ntp.cpp
+  src/panic.cpp
   src/settings.cpp
   src/main.cpp)
 
@@ -37,7 +40,8 @@ target_link_libraries(gaggico
   pico_cyw43_arch_lwip_threadsafe_background
   pico_lwip_sntp
   hardware_spi
-  hardware_adc)
+  hardware_adc
+  no-OS-FatFS-SD-SDIO-SPI-RPi-Pico)
 
 string(TIMESTAMP CURRENT_YEAR "%Y")
 
