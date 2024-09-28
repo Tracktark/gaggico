@@ -22,10 +22,14 @@
 using namespace network;
 
 constexpr auto IN_MESSAGE_BUFFER_CAP = 127;
+static_assert(sizeof(InMessages) < IN_MESSAGE_BUFFER_CAP);
+
 constexpr auto OUT_MESSAGE_BUFFER_CAP = 127;
+static_assert(MAX(sizeof(OutMessages), sizeof(Settings) + 4) < OUT_MESSAGE_BUFFER_CAP);
+
 struct Client {
     tcp_pcb* pcb;
-    isize current_msg_len;
+    usize current_in_msg_len;
     usize recved_len;
     usize written_len;
     usize acked_len;
@@ -61,6 +65,12 @@ static bool try_receive(Client& client, pbuf* p, usize size, u32& offset) {
     return client.recved_len == size;
 }
 
+static void reset_recv(Client& client) {
+    client.recved_magic = 0;
+    client.recved_len = 0;
+    client.current_in_msg_len = 0;
+}
+
 static err_t recv_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err) {
     Client& client = *static_cast<Client*>(arg);
 
@@ -91,31 +101,27 @@ static err_t recv_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_
                     client.recved_magic = 0;
                 }
             }
-        } else if (client.current_msg_len == -1) {
+        } else if (client.current_in_msg_len == 0) {
             DEBUG("Receiving message length\n");
             if (try_receive(client, p, sizeof(u32), offset)) {
                 client.recved_len = 0;
-                DEBUG("Parsing msg length\n");
-                memcpy(&client.current_msg_len, client.message_buffer, sizeof(client.current_msg_len));
-                client.current_msg_len = ntohl(client.current_msg_len);
-                DEBUG("Received message length: %d\n", client.current_msg_len);
+                memcpy(&client.current_in_msg_len, client.message_buffer, sizeof(client.current_in_msg_len));
+                client.current_in_msg_len = ntohl(client.current_in_msg_len);
+                DEBUG("Received message length: %d\n", client.current_in_msg_len);
+                if (client.current_in_msg_len < 4 || client.current_in_msg_len > IN_MESSAGE_BUFFER_CAP) {
+                    reset_recv(client);
+                }
             }
         } else {
-            if (try_receive(client, p, client.current_msg_len, offset)) {
-                u32 msg_len = client.current_msg_len - 4;
-                client.recved_len = 0;
-                client.current_msg_len = -1;
-                client.recved_magic = 0;
+            if (try_receive(client, p, client.current_in_msg_len, offset)) {
+                u32 msg_len = client.current_in_msg_len - 4;
+                reset_recv(client);
 
                 u32 msg_id;
                 memcpy(&msg_id, client.message_buffer, sizeof(msg_id));
                 msg_id = ntohl(msg_id);
-                u8* msg_data = client.message_buffer + sizeof(u32);
+                u8* msg_data = client.message_buffer + sizeof(msg_id);
                 DEBUG("Received msg %u from %u\n", msg_id, (&client - clients));
-                for (int i = 0; i < msg_len; i++) {
-                    DEBUG("%02X ", msg_data[i]);
-                }
-                DEBUG("\n");
                 handle_incoming_msg<InMessages>(msg_id, msg_data);
             }
         }
@@ -157,7 +163,7 @@ static err_t new_connection_callback(void* arg, struct tcp_pcb* client_pcb, err_
         return close_connection(client_pcb);
     }
     client->pcb = client_pcb;
-    client->current_msg_len = -1;
+    client->current_in_msg_len = 0;
     client->recved_magic = 0;
     client->recved_len = 0;
     client->acked_len = 0;
@@ -188,7 +194,9 @@ static void try_send() {
                 write_size = send_buffer_size;
             }
 
+            DEBUG("Started tcp_write\n");
             err_t err = tcp_write(client.pcb, out_message_buffer + client.written_len, write_size, 0);
+            DEBUG("Ended tcp_write\n");
             if (err == ERR_CONN) {
                 printf("Client not connected, closing connection\n");
                 tcp_pcb* pcb = client.pcb;
@@ -201,7 +209,9 @@ static void try_send() {
             }
             client.written_len += write_size;
 
+            DEBUG("Started tcp_output\n");
             err = tcp_output(client.pcb);
+            DEBUG("Ended tcp_output\n");
             if (err != ERR_OK) {
                 printf("Couldn't output tcp: %d\n", err);
                 continue;
