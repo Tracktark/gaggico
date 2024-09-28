@@ -27,7 +27,8 @@ void settings::init() {
     }
     curr_ptr += strlen(SETTINGS_MAGIC);
 
-    u32 flash_version = *reinterpret_cast<const u32*>(curr_ptr);
+    u32 flash_version;
+    memcpy(&flash_version, curr_ptr, sizeof(SETTINGS_VERSION));
     if (flash_version != SETTINGS_VERSION) { // Version doesn't match
         load_default();
         return;
@@ -35,7 +36,7 @@ void settings::init() {
     curr_ptr += sizeof(SETTINGS_VERSION);
 
     // Everything matches
-    current_settings = *reinterpret_cast<const Settings*>(curr_ptr);
+    memcpy(&current_settings, curr_ptr, sizeof(Settings));
 }
 
 const Settings& settings::get() {
@@ -52,10 +53,10 @@ void settings::update(Settings& new_settings) {
     memcpy(buf_ptr, SETTINGS_MAGIC, strlen(SETTINGS_MAGIC));
     buf_ptr += strlen(SETTINGS_MAGIC);
 
-    *reinterpret_cast<u32*>(buf_ptr) = SETTINGS_VERSION;
+    memcpy(buf_ptr, &SETTINGS_VERSION, sizeof(SETTINGS_VERSION));
     buf_ptr += sizeof(SETTINGS_VERSION);
 
-    *reinterpret_cast<Settings*>(buf_ptr) = new_settings;
+    memcpy(buf_ptr, &new_settings, sizeof(Settings));
 
     u32 save = save_and_disable_interrupts();
 
