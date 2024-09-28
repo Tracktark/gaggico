@@ -53,7 +53,7 @@ private:
     }
 
     bool add_internal(const T& data, bool block) {
-        do {
+        while (true) {
             u32 save = spin_lock_blocking(lock.spin_lock);
 
             if (size_ < Capacity) {
@@ -70,11 +70,11 @@ private:
                 spin_unlock(lock.spin_lock, save);
                 return false;
             }
-        } while (true);
+        }
     }
 
     bool remove_internal(bool block) {
-        do {
+        while (true) {
             u32 save = spin_lock_blocking(lock.spin_lock);
 
             if (size_ > 0) {
@@ -90,6 +90,6 @@ private:
                 spin_unlock(lock.spin_lock, save);
                 return false;
             }
-        } while (true);
+        }
     }
 };
