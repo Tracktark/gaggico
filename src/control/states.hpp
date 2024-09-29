@@ -59,7 +59,6 @@ struct StandbyState : State<1> {
 struct BrewState : State<2> {
     static void on_enter() {
         protocol::state().brew_start_time = get_absolute_time();
-        hardware::scale_start_tare();
         hardware::set_solenoid(true);
         control::set_pump_enabled(true);
     }
@@ -73,7 +72,6 @@ struct BrewState : State<2> {
     static bool check_transitions();
     static Protocol protocol();
 };
-
 struct SteamState : State<3> {
     static void on_enter() {
         control::set_target_temperature(settings::get().steam_temp);

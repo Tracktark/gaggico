@@ -9,6 +9,7 @@
 #include "settings.hpp"
 
 #define us_since(time) (absolute_time_diff_us((time), get_absolute_time()))
+#define ms_since(time) (absolute_time_diff_us((time), get_absolute_time()) / 1000)
 
 MaintenanceStatusMessage states::maintenance_msg;
 
@@ -65,24 +66,47 @@ bool BrewState::check_transitions() {
         statemachine::change_state<StandbyState>();
         return true;
     }
+
+    const control::Sensors& s = control::sensors();
+    const Settings set = settings::get();
+    if (hardware::is_scale_connected() && s.weight < 0 && s.weight > -5 && !hardware::is_scale_taring()) {
+        hardware::scale_tare_immediately();
+    }
     return false;
 }
 Protocol BrewState::protocol() {
+    bool tare_started = false;
+    bool tare_done = false;
+    bool preinfusion_done = false;
+    absolute_time_t start = get_absolute_time();
+
+    u32 preinfusion_ms = settings::get().preinfusion_time * 1000;
+    u32 ms_before_tare = fmin(fmax(preinfusion_ms - 500, 0), 1000);
+    float brew_weight = settings::get().brew_weight;
+
     control::set_target_pressure(settings::get().preinfusion_pressure);
 
-    co_await delay_ms(settings::get().preinfusion_time * 1000);
+    while (true) {
+        if (ms_since(start) > ms_before_tare && !tare_started) {
+            tare_started = true;
+            hardware::scale_start_tare();
+        }
+        if (tare_started && !tare_done && !hardware::is_scale_taring()) {
+            tare_done = true;
+        }
+        if (ms_since(start) > preinfusion_ms && preinfusion_done) {
+            preinfusion_done = true;
+            control::set_target_pressure(settings::get().brew_pressure);
+        }
+        if (tare_done && brew_weight > 0 && control::sensors().weight >= brew_weight) {
+            break;
+        }
 
-    control::set_target_pressure(settings::get().brew_pressure);
-
-    float brew_time = settings::get().brew_time;
-    if (brew_time < 0) co_return;
-
-    co_await delay_ms(brew_time * 1000);
-
-    if (!hardware::get_switch(hardware::Steam)) {
-        hardware::set_solenoid(false);
-        control::set_pump_enabled(false);
+        co_await next_cycle;
     }
+
+    hardware::set_solenoid(false);
+    control::set_pump_enabled(false);
 
     control::set_light_blink(250);
 }
