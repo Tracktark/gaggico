@@ -34,6 +34,7 @@ struct BrewLog {
     u32 flow_clicks;
 };
 static FIL brew_log_file;
+char brew_log_filename[32];
 
 int protocol::get_state_id() {
     return statemachine::curr_state_id;
@@ -121,13 +122,12 @@ void protocol::main_loop() {
 }
 
 static void open_brew_log_file() {
-    char filename[32];
     datetime_t datetime;
     if (!rtc_get_datetime(&datetime)) {
         printf("Brew Log Error: Couldn't get datetime\n");
         return;
     }
-    int n = snprintf(filename, 32, "brew/%04d-%02d-%02d_%02d-%02d-%02d",
+    int n = snprintf(brew_log_filename, 32, "brew/%04d-%02d-%02d_%02d-%02d-%02d",
                      datetime.year, datetime.month, datetime.day, datetime.hour,
                      datetime.min, datetime.sec);
     if (n < 0 && n >= 32) {
@@ -135,7 +135,7 @@ static void open_brew_log_file() {
         return;
     }
     f_mkdir("brew");
-    FRESULT fr = f_open(&brew_log_file, filename, FA_OPEN_ALWAYS | FA_WRITE);
+    FRESULT fr = f_open(&brew_log_file, brew_log_filename, FA_OPEN_ALWAYS | FA_WRITE);
     if (fr != FR_OK && fr != FR_EXIST) {
         printf("Brew Log Error: Couldn't open file: %d\n", fr);
         return;
@@ -153,6 +153,9 @@ static void core1_on_state_change(int old_state_id, int new_state_id) {
         FRESULT fr = f_close(&brew_log_file);
         if (fr != FR_OK) {
             printf("Brew Log Error: Couldn't close file: %d\n", fr);
+        }
+        if (absolute_time_diff_us(_state.brew_start_time, get_absolute_time()) < 5'000'000) {
+            f_unlink(brew_log_filename);
         }
     }
 }
