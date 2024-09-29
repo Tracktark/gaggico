@@ -1,5 +1,6 @@
 #include "sd_card.hpp"
 #include <cstdio>
+#include <hardware/rtc.h>
 #include <pico/stdio.h>
 #include <pico/stdio/driver.h>
 #include <ff.h>
@@ -9,12 +10,41 @@
 static FATFS fs;
 static FIL stdout_file;
 static bool initialized = false;
+static bool should_emit_timestamp = true;
+
+static void emit_timestamp() {
+    datetime_t datetime;
+    UINT t;
+    if (!rtc_get_datetime(&datetime)) return;
+
+    char buf[32];
+    int buf_len = snprintf(buf, 32, "[%04d-%02d-%02d %02d:%02d:%02d] ", datetime.year,
+                           datetime.month, datetime.day, datetime.hour, datetime.min,
+                           datetime.sec);
+
+    f_write(&stdout_file, buf, buf_len, &t);
+}
 
 stdio_driver stdio_sd_driver {
     .out_chars = [](const char* buf, int len) {
-        if (!initialized) return;
         UINT t;
-        f_write(&stdout_file, buf, len, &t);
+        if (!initialized)
+            return;
+        while (len > 0) {
+            if (should_emit_timestamp) {
+                should_emit_timestamp = false;
+                emit_timestamp();
+            }
+            const char* newline_byte = (const char*)memchr(buf, '\n', len);
+            if (!newline_byte) {
+                f_write(&stdout_file, buf, len, &t);
+                return;
+            }
+            f_write(&stdout_file, buf, newline_byte - buf + 1, &t);
+            should_emit_timestamp = true;
+            len -= newline_byte - buf + 1;
+            buf = newline_byte + 1;
+        }
     },
     .out_flush = []() {
         if (!initialized) return;
