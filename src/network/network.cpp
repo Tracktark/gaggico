@@ -1,5 +1,7 @@
 #include "network.hpp"
+#include <hardware/timer.h>
 #include <pico/cyw43_arch.h>
+#include <pico/time.h>
 #include <pico/util/queue.h>
 #include <lwip/tcp.h>
 #include <lwip/pbuf.h>
@@ -27,12 +29,16 @@ static_assert(sizeof(InMessages) < IN_MESSAGE_BUFFER_CAP);
 constexpr auto OUT_MESSAGE_BUFFER_CAP = 127;
 static_assert(MAX(sizeof(OutMessages), sizeof(Settings) + 4) < OUT_MESSAGE_BUFFER_CAP);
 
+constexpr auto ACK_TIMEOUT_MS = 2000;
+constexpr auto CLIENT_CAPACITY = 5;
+
 struct Client {
     tcp_pcb* pcb;
     usize current_in_msg_len;
     usize recved_len;
     usize written_len;
     usize acked_len;
+    absolute_time_t ack_timeout;
     u8 recved_magic;
     u8 message_buffer[IN_MESSAGE_BUFFER_CAP];
 };
@@ -142,6 +148,9 @@ static err_t sent_callback(void* arg, tcp_pcb* tpcb, u16 len) {
     u32 id = (&client - clients);
     client.acked_len += len;
     DEBUG("Client %u received %u out of %u bytes\n", id, client.acked_len, out_message_len);
+    client.ack_timeout = client.acked_len < out_message_len
+                             ? make_timeout_time_ms(ACK_TIMEOUT_MS)
+                             : at_the_end_of_time;
     return ERR_OK;
 }
 
@@ -168,6 +177,7 @@ static err_t new_connection_callback(void* arg, struct tcp_pcb* client_pcb, err_
     client->recved_len = 0;
     client->acked_len = 0;
     client->written_len = 0;
+    client->ack_timeout = at_the_end_of_time;
 
     printf("New connection\n");
     tcp_arg(client_pcb, client);
@@ -194,9 +204,7 @@ static void try_send() {
                 write_size = send_buffer_size;
             }
 
-            DEBUG("Started tcp_write\n");
             err_t err = tcp_write(client.pcb, out_message_buffer + client.written_len, write_size, 0);
-            DEBUG("Ended tcp_write\n");
             if (err == ERR_CONN) {
                 printf("Client not connected, closing connection\n");
                 tcp_pcb* pcb = client.pcb;
@@ -208,10 +216,9 @@ static void try_send() {
                 continue;
             }
             client.written_len += write_size;
+            client.ack_timeout = make_timeout_time_ms(ACK_TIMEOUT_MS);
 
-            DEBUG("Started tcp_output\n");
             err = tcp_output(client.pcb);
-            DEBUG("Ended tcp_output\n");
             if (err != ERR_OK) {
                 printf("Couldn't output tcp: %d\n", err);
                 continue;
@@ -248,6 +255,16 @@ static void serialize_message() {
 }
 
 void network::process_outgoing_messages() {
+    for (usize i = 0; i < CLIENT_CAPACITY; i++) {
+        if (clients[i].pcb == nullptr)
+            continue;
+        if (time_reached(clients[i].ack_timeout)) {
+            printf("Ack timeout for client %d, disconnecting.\n", i);
+            tcp_pcb* tpcb = clients[i].pcb;
+            clients[i].pcb = nullptr;
+            close_connection(tpcb);
+        }
+    }
     if (out_message_len > 0) { // Currently sending a message
         try_send();
         return;
