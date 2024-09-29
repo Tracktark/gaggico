@@ -94,7 +94,7 @@ Protocol BrewState::protocol() {
         if (tare_started && !tare_done && !hardware::is_scale_taring()) {
             tare_done = true;
         }
-        if (ms_since(start) > preinfusion_ms && preinfusion_done) {
+        if (ms_since(start) > preinfusion_ms && !preinfusion_done) {
             preinfusion_done = true;
             control::set_target_pressure(settings::get().brew_pressure);
         }
