@@ -50,6 +50,10 @@ static isize out_message_len = -1;
 static Queue<OutMessages, 20> out_message_queue;
 
 static err_t close_connection(tcp_pcb* pcb) {
+    tcp_arg(pcb, nullptr);
+    tcp_sent(pcb, nullptr);
+    tcp_recv(pcb, nullptr);
+    tcp_err(pcb, nullptr);
     err_t err = tcp_close(pcb);
     if (err != ERR_OK) {
         printf("Connection close failed, aborting: %d\n", err);
