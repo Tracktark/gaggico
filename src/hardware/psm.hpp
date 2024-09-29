@@ -3,19 +3,18 @@
 #include <hardware/gpio.h>
 #include "inttypes.hpp"
 
-class PSM {
+struct PSM {
     absolute_time_t next_update_time;
 
     i32 accumulator = 0;
     i32 max_value;
     i32 set_value = 0;
 
-    u32 counter = 0;
+    volatile u32 counter = 0;
     u32 control_pin;
 
     u32 divider_counter = 0;
 
-public:
     explicit PSM(u32 control_pin, u32 max_value)
         : control_pin(control_pin), max_value(max_value) {
 
@@ -39,7 +38,7 @@ public:
         if (accumulator >= max_value) {
             accumulator -= max_value;
             gpio_put(control_pin, true);
-            counter++;
+            counter += 1;
         } else {
             gpio_put(control_pin, false);
         }
@@ -47,12 +46,5 @@ public:
 
     constexpr void set(u32 value) {
         set_value = MIN(value, max_value);
-    }
-
-    constexpr void reset_counter() {
-        counter = 0;
-    }
-    constexpr u32 get_counter() const {
-        return counter;
     }
 };

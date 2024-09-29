@@ -6,7 +6,6 @@ struct Sensors {
     float pressure;
     float temperature;
     float weight;
-    float scale_connected;
 };
 
 void set_boiler_enabled(bool enabled);

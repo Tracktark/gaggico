@@ -16,7 +16,7 @@ using namespace hardware;
 constexpr auto TEMP_CS_PIN = 5;
 constexpr auto TEMP_SCK_PIN = 2;
 constexpr auto TEMP_MISO_PIN = 4;
-#define TEMP_SPI spi0 
+#define TEMP_SPI spi0
 constexpr auto TEMP_READ_INTERVAL = 250;
 
 constexpr auto PRESSURE_PIN = 26;
@@ -38,7 +38,7 @@ constexpr auto SCALE_SM_L = 0;
 constexpr auto SCALE_SM_R = 1;
 constexpr auto SCALE_MULT_L = 2189.f;
 constexpr auto SCALE_MULT_R = -2273.f;
-constexpr auto SCALE_TARE_STEPS = 10;
+constexpr auto SCALE_TARE_STEPS = 5;
 
 constexpr auto SD_SCK_PIN = 10;
 constexpr auto SD_TX_PIN = 11;
@@ -52,11 +52,13 @@ static PSM pump_psm(PUMP_DIM_PIN, 100);
 static PSM heater_psm(HEAT_DIM_PIN, 100);
 
 static struct ScaleState {
-    int32_t offset_l;
-    int32_t offset_r;
-    int32_t tare_step = 0; // Setting to 0 means scales are tared automatically on startup
-    int32_t avg_l = 0;
-    int32_t avg_r = 0;
+    i32 offset_l;
+    i32 offset_r;
+    i32 tare_step = 0; // Setting to 0 means scales are tared automatically on startup
+    i32 avg_l = 0;
+    i32 avg_r = 0;
+    i32 val_l = 0;
+    i32 val_r = 0;
     float last_weight;
     bool connected = false;
 } scale_state;
@@ -133,6 +135,12 @@ void hardware::set_pump(float val) {
     pump_psm.set(val * 100);
 }
 
+u32 hardware::get_and_reset_pump_clicks() {
+    u32 clicks = pump_psm.counter;
+    pump_psm.counter = 0;
+    return clicks;
+}
+
 void hardware::set_solenoid(bool active) {
     gpio_put(SOLENOID_PIN, active);
 }
@@ -180,14 +188,13 @@ float hardware::read_pressure() {
 }
 
 float hardware::read_weight() {
-    int32_t val_l, val_r;
-    if (hx711_get(SCALE_PIO, SCALE_SM_L, SCALE_SM_R, &val_l, &val_r, &scale_state.connected)) {
-        float weight_l = (val_l - scale_state.offset_l) / SCALE_MULT_L;
-        float weight_r = (val_r - scale_state.offset_r) / SCALE_MULT_R;
+    if (hx711_get(SCALE_PIO, SCALE_SM_L, SCALE_SM_R, &scale_state.val_l, &scale_state.val_r, &scale_state.connected)) {
+        float weight_l = (scale_state.val_l - scale_state.offset_l) / SCALE_MULT_L;
+        float weight_r = (scale_state.val_r - scale_state.offset_r) / SCALE_MULT_R;
         scale_state.last_weight = weight_l + weight_r;
         if (scale_state.tare_step >= 0) {
-            scale_state.avg_l += val_l;
-            scale_state.avg_r += val_r;
+            scale_state.avg_l += scale_state.val_l;
+            scale_state.avg_r += scale_state.val_r;
             scale_state.tare_step++;
         }
         if (scale_state.tare_step >= SCALE_TARE_STEPS) {
@@ -203,6 +210,11 @@ void hardware::scale_start_tare() {
     scale_state.tare_step = 0;
     scale_state.avg_l = 0;
     scale_state.avg_r = 0;
+}
+
+void hardware::scale_tare_immediately() {
+    scale_state.offset_l = scale_state.val_l;
+    scale_state.offset_r = scale_state.val_r;
 }
 
 bool hardware::is_scale_connected() { return scale_state.connected; }
@@ -233,4 +245,3 @@ bool hardware::is_power_just_pressed() {
     }
     return false;
 }
-

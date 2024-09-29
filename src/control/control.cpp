@@ -27,7 +27,7 @@ static bool blink_light_on = false;
 static bool heater_enabled = false;
 static bool pump_enabled = false;
 static absolute_time_t heater_update_timeout = nil_time;
-static float target_pressure = false;
+static float target_pressure;
 static PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
 
 void control::set_boiler_enabled(bool enabled) {
@@ -85,7 +85,6 @@ void control::update_sensors() {
     }
 
     _sensors.weight = hardware::read_weight();
-    _sensors.scale_connected = hardware::is_scale_connected();
 }
 
 void control::update() {

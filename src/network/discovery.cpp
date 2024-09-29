@@ -26,4 +26,3 @@ void discovery::init() {
 
     cyw43_arch_lwip_end();
 }
-

@@ -1,12 +1,17 @@
 #include "protocol.hpp"
 #include <cmath>
 #include <cstdio>
+#include <hardware/rtc.h>
+#include <hardware/timer.h>
 #include <pico/time.h>
 #include <pico/mutex.h>
 #include <hardware/watchdog.h>
+#include <pico/types.h>
 #include "control/control.hpp"
 #include "control/impl/state_machine.hpp"
 #include "control/states.hpp"
+#include "ff.h"
+#include "hardware/hardware.hpp"
 #include "network/network.hpp"
 #include "network/messages.hpp"
 #include "network/ntp.hpp"
@@ -22,6 +27,13 @@ static volatile bool core1_watchdog_enabled = false;
 
 auto_init_mutex(next_state_mutex);
 static volatile int next_state = -1;
+
+struct BrewLog {
+    float time;
+    control::Sensors sensors;
+    u32 flow_clicks;
+};
+static FIL brew_log_file;
 
 int protocol::get_state_id() {
     return statemachine::curr_state_id;
@@ -108,16 +120,54 @@ void protocol::main_loop() {
     }
 }
 
+static void open_brew_log_file() {
+    char filename[32];
+    datetime_t datetime;
+    if (!rtc_get_datetime(&datetime)) {
+        printf("Brew Log Error: Couldn't get datetime\n");
+        return;
+    }
+    int n = snprintf(filename, 32, "brew/%04d-%02d-%02d_%02d-%02d-%02d",
+                     datetime.year, datetime.month, datetime.day, datetime.hour,
+                     datetime.min, datetime.sec);
+    if (n < 0 && n >= 32) {
+        printf("Brew Log Error: Couldn't write filename\n");
+        return;
+    }
+    f_mkdir("brew");
+    FRESULT fr = f_open(&brew_log_file, filename, FA_OPEN_ALWAYS | FA_WRITE);
+    if (fr != FR_OK && fr != FR_EXIST) {
+        printf("Brew Log Error: Couldn't open file: %d\n", fr);
+        return;
+    }
+}
+
+static void core1_on_state_change(int old_state_id, int new_state_id) {
+    if (old_state_id == OffState::ID) sd_card::init();
+    if (new_state_id == OffState::ID) sd_card::deinit();
+    if (new_state_id == BrewState::ID) {
+        hardware::get_and_reset_pump_clicks();
+        open_brew_log_file();
+    }
+    if (old_state_id == BrewState::ID) {
+        FRESULT fr = f_close(&brew_log_file);
+        if (fr != FR_OK) {
+            printf("Brew Log Error: Couldn't close file: %d\n", fr);
+        }
+    }
+}
+
 void protocol::network_loop() {
     SensorStatusMessage msg;
     absolute_time_t sensor_message_time = nil_time;
+    absolute_time_t sensor_log_time = nil_time;
 
     // Enable watchdog
     mutex_enter_blocking(&core1_alive_mutex);
     core1_watchdog_enabled = true;
     mutex_exit(&core1_alive_mutex);
 
-    bool sd_initialized = false;
+    int old_state_id = OffState::ID;
 
     while (true) {
         sleep_ms(10);
@@ -127,16 +177,13 @@ void protocol::network_loop() {
         core1_alive = true;
         mutex_exit(&core1_alive_mutex);
 
-        network::process_outgoing_messages();
+        int new_state_id = get_state_id();
+        if (old_state_id != new_state_id) {
+            core1_on_state_change(old_state_id, new_state_id);
+            old_state_id = new_state_id;
+        }
 
-        if (get_state_id() != OffState::ID && !sd_initialized) {
-            sd_initialized = true;
-            sd_card::init();
-        }
-        if (get_state_id() == OffState::ID && sd_initialized) {
-            sd_initialized = false;
-            sd_card::deinit();
-        }
+        network::process_outgoing_messages();
 
         if (get_state_id() != OffState::ID && time_reached(sensor_message_time)) {
             sensor_message_time = make_timeout_time_ms(get_state_id() == BrewState::ID ? 100 : 250);
@@ -145,8 +192,24 @@ void protocol::network_loop() {
                 const control::Sensors& s = control::sensors();
                 msg.pressure = s.pressure;
                 msg.temp = s.temperature;
-                msg.weight = s.scale_connected ? s.weight : NAN;
+                msg.weight = hardware::is_scale_connected() ? s.weight : NAN;
                 network::enqueue_message(msg);
+            }
+        }
+
+        if (get_state_id() == BrewState::ID && time_reached(sensor_log_time)) {
+            sensor_log_time = make_timeout_time_ms(100);
+
+            BrewLog brew_log {
+                .time = absolute_time_diff_us(_state.brew_start_time, get_absolute_time()) / 1'000'000.0f,
+                .sensors = control::sensors(),
+                .flow_clicks = hardware::get_and_reset_pump_clicks(),
+            };
+            UINT written;
+            FRESULT fr = f_write(&brew_log_file, &brew_log,
+                                 sizeof(brew_log), &written);
+            if (fr != FR_OK) {
+                printf("Brew Log Error: Couldn't write data: %d\n", fr);
             }
         }
     }
