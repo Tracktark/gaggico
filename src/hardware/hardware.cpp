@@ -189,9 +189,6 @@ float hardware::read_pressure() {
 
 float hardware::read_weight() {
     if (hx711_get(SCALE_PIO, SCALE_SM_L, SCALE_SM_R, &scale_state.val_l, &scale_state.val_r, &scale_state.connected)) {
-        float weight_l = (scale_state.val_l - scale_state.offset_l) / SCALE_MULT_L;
-        float weight_r = (scale_state.val_r - scale_state.offset_r) / SCALE_MULT_R;
-        scale_state.last_weight = weight_l + weight_r;
         if (scale_state.tare_step >= 0) {
             scale_state.avg_l += scale_state.val_l;
             scale_state.avg_r += scale_state.val_r;
@@ -202,6 +199,9 @@ float hardware::read_weight() {
             scale_state.offset_l = scale_state.avg_l / SCALE_TARE_STEPS;
             scale_state.offset_r = scale_state.avg_r / SCALE_TARE_STEPS;
         }
+        float weight_l = (scale_state.val_l - scale_state.offset_l) / SCALE_MULT_L;
+        float weight_r = (scale_state.val_r - scale_state.offset_r) / SCALE_MULT_R;
+        scale_state.last_weight = weight_l + weight_r;
     }
     return scale_state.last_weight;
 }
