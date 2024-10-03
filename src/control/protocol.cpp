@@ -35,6 +35,7 @@ struct BrewLog {
 };
 static FIL brew_log_file;
 char brew_log_filename[32];
+constexpr i32 BREW_LOG_VERSION = 2;
 
 int protocol::get_state_id() {
     return statemachine::curr_state_id;
@@ -138,6 +139,13 @@ static void open_brew_log_file() {
     FRESULT fr = f_open(&brew_log_file, brew_log_filename, FA_OPEN_ALWAYS | FA_WRITE);
     if (fr != FR_OK && fr != FR_EXIST) {
         printf("Brew Log Error: Couldn't open file: %d\n", fr);
+        return;
+    }
+    UINT written;
+    fr = f_write(&brew_log_file, &BREW_LOG_VERSION, sizeof(BREW_LOG_VERSION),
+                 &written);
+    if (fr != FR_OK) {
+        printf("Brew Log Error: Couldn't write version to file: %d\n", fr);
         return;
     }
 }
