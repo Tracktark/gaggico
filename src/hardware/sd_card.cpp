@@ -8,9 +8,9 @@
 #include "panic.hpp"
 
 static FATFS fs;
-static FIL stdout_file;
-static bool initialized = false;
-static bool should_emit_timestamp = true;
+static volatile FIL stdout_file;
+static volatile bool initialized = false;
+static volatile bool should_emit_timestamp = true;
 
 static void emit_timestamp() {
     datetime_t datetime;
@@ -22,7 +22,7 @@ static void emit_timestamp() {
                            datetime.month, datetime.day, datetime.hour, datetime.min,
                            datetime.sec);
 
-    f_write(&stdout_file, buf, buf_len, &t);
+    f_write((FIL*)&stdout_file, buf, buf_len, &t);
 }
 
 stdio_driver stdio_sd_driver {
@@ -37,10 +37,10 @@ stdio_driver stdio_sd_driver {
             }
             const char* newline_byte = (const char*)memchr(buf, '\n', len);
             if (!newline_byte) {
-                f_write(&stdout_file, buf, len, &t);
+                f_write((FIL*)&stdout_file, buf, len, &t);
                 return;
             }
-            f_write(&stdout_file, buf, newline_byte - buf + 1, &t);
+            f_write((FIL*)&stdout_file, buf, newline_byte - buf + 1, &t);
             should_emit_timestamp = true;
             len -= newline_byte - buf + 1;
             buf = newline_byte + 1;
@@ -48,7 +48,7 @@ stdio_driver stdio_sd_driver {
     },
     .out_flush = []() {
         if (!initialized) return;
-        f_sync(&stdout_file);
+        f_sync((FIL*)&stdout_file);
     }
 };
 
@@ -60,7 +60,7 @@ void sd_card::init() {
         printf("f_mount error: %d\n", fr);
         panic(Error::SD_CARD_ERROR);
     }
-    fr = f_open(&stdout_file, "stdout.txt", FA_OPEN_APPEND | FA_WRITE);
+    fr = f_open((FIL*)&stdout_file, "stdout.txt", FA_OPEN_APPEND | FA_WRITE);
     if (!(fr == FR_OK || fr == FR_EXIST)) {
         printf("f_open error: %d\n", fr);
         panic(Error::SD_CARD_ERROR);
@@ -72,7 +72,7 @@ void sd_card::init() {
 void sd_card::deinit() {
     if (!initialized) return;
     stdio_set_driver_enabled(&stdio_sd_driver, false);
-    f_close(&stdout_file);
+    f_close((FIL*)&stdout_file);
     f_unmount("");
     initialized = false;
 }
