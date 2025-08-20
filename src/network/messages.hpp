@@ -17,6 +17,7 @@ struct SensorStatusMessage {
     float temp;
     float pressure;
     float weight;
+    float flow;
 };
 
 struct SettingsGetMessage {
@@ -56,13 +57,13 @@ struct SettingsUpdateMessage {
     }
 };
 
-struct GetStatusMessage  {
+struct GetStatusMessage {
     static constexpr i32 INCOMING_ID = 3;
 
     void handle();
 };
 
-struct MaintenanceMessage  {
+struct MaintenanceMessage {
     static constexpr i32 INCOMING_ID = 4;
     u32 type;
 

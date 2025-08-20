@@ -14,6 +14,7 @@ Sensors _sensors;
 static SimpleKalmanFilter pressure_filter(0.6, 0.6, 0.1);
 static SimpleKalmanFilter temp_filter(0.5, 0.5, 0.3);
 static absolute_time_t pressure_read_timeout = nil_time;
+static absolute_time_t flow_update_timeout = nil_time;
 static absolute_time_t temp_read_timeout = nil_time;
 static absolute_time_t close_enough_time = nil_time;
 static bool last_close_enough = false;
@@ -28,6 +29,7 @@ static bool heater_enabled = false;
 static bool pump_enabled = false;
 static absolute_time_t heater_update_timeout = nil_time;
 static float target_pressure;
+static float target_flow = 999999;
 static PID heater_pid(0.087, 0.00383, 0.49416, 0, 1);
 
 void control::set_boiler_enabled(bool enabled) {
@@ -48,6 +50,9 @@ void control::set_pump_enabled(bool enabled) {
 
 void control::set_target_pressure(float pressure) {
     target_pressure = pressure;
+}
+void control::set_target_flow(float flow) {
+    target_flow = flow;
 }
 
 void control::set_target_temperature(float temperature) {
@@ -84,6 +89,13 @@ void control::update_sensors() {
         temp_read_timeout = make_timeout_time_ms(250);
     }
 
+    if (time_reached(flow_update_timeout)) {
+        _sensors.pump_clicks = hardware::get_and_reset_pump_clicks();
+        float flow_per_100ms = get_flow(_sensors.pressure, _sensors.pump_clicks);
+        _sensors.flow = flow_per_100ms * 10; // Calculate flow in ml/s
+        flow_update_timeout = make_timeout_time_ms(100);
+    }
+
     _sensors.weight = hardware::read_weight();
 }
 
@@ -110,9 +122,7 @@ void control::update() {
     }
 
     if (pump_enabled) {
-        float curr_pressure = _sensors.pressure;
-
-        float pump_value = getPumpPct(curr_pressure, target_pressure);
+        float pump_value = calculate_desired_power(_sensors, target_pressure, target_flow);
         hardware::set_pump(pump_value);
     }
 

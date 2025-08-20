@@ -9,10 +9,10 @@ using namespace settings;
 
 constexpr auto SETTINGS_FLASH_OFFSET = (1024 * 1024);
 constexpr auto SETTINGS_MAGIC = "GAGGICO ";
-constexpr u32 SETTINGS_VERSION = 3;
+constexpr u32 SETTINGS_VERSION = 4;
 const u8* flash_settings = reinterpret_cast<const u8*>(XIP_BASE + SETTINGS_FLASH_OFFSET);
 
-Settings current_settings;
+static Settings current_settings;
 
 void load_default() {
     Settings default_settings;

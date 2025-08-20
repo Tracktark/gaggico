@@ -43,6 +43,7 @@ struct StandbyState : State<1> {
         const Settings& s = settings::get();
         control::set_pid_params(s.kp, s.ki, s.kd);
         control::set_boiler_enabled(true);
+        control::set_target_flow(99999);
         control::set_target_temperature(settings::get().brew_temp);
     }
 
@@ -61,6 +62,7 @@ struct BrewState : State<2> {
         protocol::state().brew_start_time = get_absolute_time();
         hardware::set_solenoid(true);
         control::set_pump_enabled(true);
+        control::set_target_flow(99999);
     }
 
     static void on_exit() {

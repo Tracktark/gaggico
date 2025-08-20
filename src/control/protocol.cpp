@@ -31,7 +31,6 @@ static volatile int next_state = -1;
 struct BrewLog {
     float time;
     control::Sensors sensors;
-    u32 flow_clicks;
 };
 static FIL brew_log_file;
 char brew_log_filename[32];
@@ -204,6 +203,7 @@ void protocol::network_loop() {
                 msg.pressure = s.pressure;
                 msg.temp = s.temperature;
                 msg.weight = hardware::is_scale_connected() ? s.weight : NAN;
+                msg.flow = s.flow;
                 network::enqueue_message(msg);
             }
         }
@@ -214,7 +214,6 @@ void protocol::network_loop() {
             BrewLog brew_log {
                 .time = absolute_time_diff_us(_state.brew_start_time, get_absolute_time()) / 1'000'000.0f,
                 .sensors = control::sensors(),
-                .flow_clicks = hardware::get_and_reset_pump_clicks(),
             };
             UINT written;
             FRESULT fr = f_write(&brew_log_file, &brew_log,
