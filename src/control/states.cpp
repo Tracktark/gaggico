@@ -75,6 +75,7 @@ bool BrewState::check_transitions() {
     return false;
 }
 Protocol BrewState::protocol() {
+    bool has_scales = hardware::is_scale_connected();
     bool tare_started = false;
     bool tare_done = false;
     bool preinfusion_done = false;
@@ -87,11 +88,11 @@ Protocol BrewState::protocol() {
     control::set_target_pressure(settings::get().preinfusion_pressure);
 
     while (true) {
-        if (ms_since(start) > ms_before_tare && !tare_started) {
+        if (has_scales && !tare_started && ms_since(start) > ms_before_tare) {
             tare_started = true;
             hardware::scale_start_tare();
         }
-        if (tare_started && !tare_done && !hardware::is_scale_taring()) {
+        if (has_scales && tare_started && !tare_done && !hardware::is_scale_taring()) {
             tare_done = true;
         }
         if (ms_since(start) > preinfusion_ms && !preinfusion_done) {

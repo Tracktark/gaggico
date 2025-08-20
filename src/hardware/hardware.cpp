@@ -1,5 +1,6 @@
 #include "hardware.hpp"
 #include <cstdio>
+#include <cmath>
 #include <hardware/gpio.h>
 #include <hardware/spi.h>
 #include <hardware/adc.h>
@@ -59,7 +60,7 @@ static struct ScaleState {
     i32 avg_r = 0;
     i32 val_l = 0;
     i32 val_r = 0;
-    float last_weight;
+    float last_weight = NAN;
     bool connected = false;
 } scale_state;
 
@@ -207,18 +208,22 @@ float hardware::read_weight() {
 }
 
 void hardware::scale_start_tare() {
+    if (!scale_state.connected) return;
     scale_state.tare_step = 0;
     scale_state.avg_l = 0;
     scale_state.avg_r = 0;
 }
 
 void hardware::scale_tare_immediately() {
+    if (!scale_state.connected) return;
     scale_state.offset_l = scale_state.val_l;
     scale_state.offset_r = scale_state.val_r;
 }
 
 bool hardware::is_scale_connected() { return scale_state.connected; }
-bool hardware::is_scale_taring() { return scale_state.tare_step >= 0; }
+bool hardware::is_scale_taring() {
+    return scale_state.connected && scale_state.tare_step >= 0;
+}
 
 void hardware::set_light(Switch which, bool active) {
     gpio_put(LIGHT_PIN_BASE + which, active);
