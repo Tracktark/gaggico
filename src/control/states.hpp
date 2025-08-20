@@ -122,4 +122,25 @@ struct DescaleState : State<5> {
     static Protocol protocol();
 };
 
-using States = std::tuple<OffState, StandbyState, BrewState, SteamState, BackflushState, DescaleState>;
+struct ManualControlState : State<6> {
+    inline static volatile float target_pressure;
+    inline static volatile float target_flow;
+    inline static volatile int time_ms;
+
+    static void on_enter() {
+        hardware::set_solenoid(true);
+        control::set_target_flow(target_flow);
+        control::set_target_pressure(target_pressure);
+        control::set_pump_enabled(true);
+        control::set_light_blink(1000);
+    }
+
+    static void on_exit() {
+        control::set_pump_enabled(false);
+        hardware::set_solenoid(false);
+        control::set_light_blink(0);
+    }
+    static Protocol protocol();
+};
+
+using States = std::tuple<OffState, StandbyState, BrewState, SteamState, BackflushState, DescaleState, ManualControlState>;

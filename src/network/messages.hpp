@@ -70,4 +70,18 @@ struct MaintenanceMessage {
     void handle();
 };
 
-using InMessages = std::variant<PowerMessage, SettingsUpdateMessage, GetStatusMessage, MaintenanceMessage>;
+struct ManualControlMessage {
+    static constexpr i32 INCOMING_ID = 5;
+    float target_pressure;
+    float target_flow;
+    int time_ms;
+
+    void handle();
+};
+
+
+using InMessages = std::variant<PowerMessage,
+                                SettingsUpdateMessage,
+                                GetStatusMessage,
+                                MaintenanceMessage,
+                                ManualControlMessage>;

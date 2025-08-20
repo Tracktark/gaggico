@@ -281,3 +281,11 @@ Protocol DescaleState::protocol() {
 
     protocol::schedule_state_change<StandbyState>();
 }
+
+Protocol ManualControlState::protocol() {
+    absolute_time_t timeout = make_timeout_time_ms(time_ms);
+    while (!time_reached(timeout)) {
+        co_await next_cycle;
+    }
+    protocol::schedule_state_change<StandbyState>();
+}

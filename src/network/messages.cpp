@@ -32,3 +32,14 @@ void MaintenanceMessage::handle() {
         }
     }
 }
+
+void ManualControlMessage::handle() {
+    if (protocol::get_state_id() == StandbyState::ID) {
+        ManualControlState::target_flow = target_flow;
+        ManualControlState::target_pressure = target_pressure;
+        ManualControlState::time_ms = time_ms;
+        protocol::schedule_state_change<ManualControlState>();
+    } else if (protocol::get_state_id() == ManualControlState::ID) {
+        protocol::schedule_state_change<StandbyState>();
+    }
+}
