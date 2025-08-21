@@ -85,22 +85,35 @@ Protocol BrewState::protocol() {
     u32 ms_before_tare = fmin(fmax(preinfusion_ms - 500, 0), 1000);
     float brew_weight = settings::get().brew_weight;
 
+    float zero_flow = -1;
+
     control::set_target_pressure(settings::get().preinfusion_pressure);
 
     while (true) {
-        if (has_scales && !tare_started && ms_since(start) > ms_before_tare) {
-            tare_started = true;
-            hardware::scale_start_tare();
-        }
-        if (has_scales && tare_started && !tare_done && !hardware::is_scale_taring()) {
-            tare_done = true;
-        }
         if (ms_since(start) > preinfusion_ms && !preinfusion_done) {
             preinfusion_done = true;
             control::set_target_pressure(settings::get().brew_pressure);
         }
-        if (tare_done && brew_weight > 0 && control::sensors().weight >= brew_weight) {
-            break;
+
+        if (has_scales) {
+            if (!tare_started && ms_since(start) > ms_before_tare) {
+                tare_started = true;
+                hardware::scale_start_tare();
+            }
+            if (tare_started)
+                tare_done = !hardware::is_scale_taring();
+            if (tare_done && brew_weight > 0 && control::sensors().weight >= brew_weight)
+                break;
+        }
+
+        if (hardware::get_switch(hardware::Steam) && zero_flow < 0) {
+            zero_flow = control::sensors().total_flow;
+        }
+        if (zero_flow >= 0) {
+            float weight = control::sensors().total_flow - zero_flow;
+            if (brew_weight > 0 && weight >= brew_weight) {
+                break;
+            }
         }
 
         co_await next_cycle;

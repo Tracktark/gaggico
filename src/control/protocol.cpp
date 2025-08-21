@@ -31,10 +31,11 @@ static volatile int next_state = -1;
 struct BrewLog {
     float time;
     control::Sensors sensors;
+    bool steam_switch_pressed;
 };
 static FIL brew_log_file;
 char brew_log_filename[32];
-constexpr i32 BREW_LOG_VERSION = 2;
+constexpr i32 BREW_LOG_VERSION = 4;
 
 int protocol::get_state_id() {
     return statemachine::curr_state_id;
@@ -214,6 +215,7 @@ void protocol::network_loop() {
             BrewLog brew_log {
                 .time = absolute_time_diff_us(_state.brew_start_time, get_absolute_time()) / 1'000'000.0f,
                 .sensors = control::sensors(),
+                .steam_switch_pressed = hardware::get_switch(hardware::Steam),
             };
             UINT written;
             FRESULT fr = f_write(&brew_log_file, &brew_log,

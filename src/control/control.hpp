@@ -8,6 +8,7 @@ struct Sensors {
     float weight;
     float flow;
     u32 pump_clicks;
+    float total_flow = 0;
 };
 
 void set_boiler_enabled(bool enabled);

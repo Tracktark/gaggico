@@ -88,6 +88,7 @@ void control::update_sensors() {
     if (time_reached(flow_update_timeout)) {
         _sensors.pump_clicks = hardware::get_and_reset_pump_clicks();
         float flow_per_100ms = get_flow(_sensors.pressure, _sensors.pump_clicks);
+        _sensors.total_flow += flow_per_100ms;
         _sensors.flow = flow_per_100ms * 10; // Calculate flow in ml/s
         flow_update_timeout = make_timeout_time_ms(100);
     }
