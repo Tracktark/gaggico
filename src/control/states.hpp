@@ -40,8 +40,6 @@ struct OffState : State<0> {
 
 struct StandbyState : State<1> {
     static void on_enter() {
-        const Settings& s = settings::get();
-        control::set_pid_params(s.kp, s.ki, s.kd);
         control::set_boiler_enabled(true);
         control::set_target_flow(99999);
         control::set_target_temperature(settings::get().brew_temp);

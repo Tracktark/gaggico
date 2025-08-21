@@ -8,9 +8,6 @@ struct Settings {
     float preinfusion_pressure = 2;
     float preinfusion_time = 0;
     float brew_weight = -1;
-    float kp = 0.087;
-    float ki = 0.00383;
-    float kd = 0.49416;
     float pump_zero = 0;
 
     void write_data(u8*& ptr) const;

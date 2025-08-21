@@ -59,10 +59,6 @@ void control::set_target_temperature(float temperature) {
     heater_pid.set_target(temperature);
 }
 
-void control::set_pid_params(float kp, float ki, float kd) {
-    heater_pid.set_params(kp, ki, kd);
-}
-
 void control::set_light_blink(u32 delay_ms) {
     hardware::set_light(hardware::Steam, false);
     blink_light_period = delay_ms;
