@@ -130,9 +130,12 @@ static err_t recv_callback(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_
                 u32 msg_id;
                 memcpy(&msg_id, client.message_buffer, sizeof(msg_id));
                 msg_id = ntohl(msg_id);
-                u8* msg_data = client.message_buffer + sizeof(msg_id);
-                DEBUG("Received msg %u from %u\n", msg_id, (&client - clients));
-                handle_incoming_msg<InMessages>(msg_id, msg_data);
+                if (msg_id >= 1 && msg_id <= msg_count<InMessages> &&
+                    msg_sizes<InMessages>[msg_id-1] == msg_len) {
+                    u8* msg_data = client.message_buffer + sizeof(msg_id);
+                    DEBUG("Received msg %u from %u\n", msg_id, (&client - clients));
+                    handle_incoming_msg<InMessages>(msg_id, msg_data);
+                }
             }
         }
     }

@@ -38,6 +38,21 @@ void handle_incoming_msg(int msg_id, u8*& data_ptr) {
     handle_impl<Variant, Variant>::handle(msg_id, msg, data_ptr);
 }
 
+template <typename T, class=void>
+constexpr u32 msg_size = sizeof(T);
+template <typename T>
+constexpr u32 msg_size<T, std::void_t<decltype(T::SIZE)>> = T::SIZE;
+
+template <typename T>
+constexpr u32 msg_sizes[0] = {};
+template <typename... Ts>
+constexpr u32 msg_sizes<std::variant<Ts...>>[sizeof...(Ts)] = {msg_size<Ts>...};
+
+template <typename T>
+constexpr u32 msg_count = 0;
+template <typename... Ts>
+constexpr u32 msg_count<std::variant<Ts...>> = sizeof...(Ts);
+
 template <typename T>
 concept OutgoingMsg = requires(T t) {
     { T::OUTGOING_ID } -> std::convertible_to<i32>;

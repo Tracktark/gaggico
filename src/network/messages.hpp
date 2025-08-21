@@ -59,6 +59,7 @@ struct SettingsUpdateMessage {
 
 struct GetStatusMessage {
     static constexpr i32 INCOMING_ID = 3;
+    static constexpr u32 SIZE = 0;
 
     void handle();
 };
