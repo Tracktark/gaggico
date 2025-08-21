@@ -7,6 +7,7 @@
 #include <hardware/pio.h>
 #include <pico/sync.h>
 #include <pico/time.h>
+#include "hardware/thermal_runaway.hpp"
 #include "hx711.pio.h"
 #include "config.hpp"
 #include "panic.hpp"
@@ -51,6 +52,7 @@ static absolute_time_t next_temp_read_time = nil_time;
 static critical_section_t temp_cs;
 static PSM pump_psm(PUMP_DIM_PIN, 100);
 static PSM heater_psm(HEAT_DIM_PIN, 100);
+static ThermalRunawayCheck thermal_check;
 
 static struct ScaleState {
     i32 offset_l;
@@ -130,6 +132,12 @@ void hardware::init() {
 
 void hardware::set_heater(float val) {
     heater_psm.set(val * 100);
+}
+
+void hardware::check_thermals() {
+    if (thermal_check.has_fault(heater_psm.set_value, pump_psm.set_value, read_temp())) {
+        panic(Error::THERMAL_RUNAWAY);
+    }
 }
 
 void hardware::set_pump(float val) {

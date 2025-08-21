@@ -7,6 +7,7 @@ enum class Error {
     COROUTINE_TOO_BIG,
     MESSAGE_QUEUE_FULL,
     SD_CARD_ERROR,
+    THERMAL_RUNAWAY,
 };
 
 [[noreturn]] void panic(Error error);

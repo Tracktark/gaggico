@@ -77,6 +77,8 @@ void protocol::main_loop() {
         }
         state().last_loop_time = now;
 
+        hardware::check_thermals();
+
         // Only update watchdog if core1 is also alive
         if (mutex_try_enter(&core1_alive_mutex, nullptr)) {
             if (!core1_watchdog_enabled || core1_alive) {

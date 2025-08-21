@@ -8,6 +8,7 @@ enum Switch {
 
 void init();
 void set_heater(float val);
+void check_thermals();
 void set_pump(float val);
 u32 get_and_reset_pump_clicks();
 void set_solenoid(bool active);
