@@ -52,7 +52,7 @@ struct StandbyState : State<1> {
     }
 
     static bool check_transitions();
-    static Protocol protocol();
+    static Coroutine coroutine();
 };
 
 struct BrewState : State<2> {
@@ -70,7 +70,7 @@ struct BrewState : State<2> {
     }
 
     static bool check_transitions();
-    static Protocol protocol();
+    static Coroutine coroutine();
 };
 struct SteamState : State<3> {
     static void on_enter() {
@@ -86,7 +86,7 @@ struct SteamState : State<3> {
     }
 
     static bool check_transitions();
-    static Protocol protocol();
+    static Coroutine coroutine();
 };
 
 struct BackflushState : State<4> {
@@ -100,7 +100,7 @@ struct BackflushState : State<4> {
         hardware::set_solenoid(false);
         control::set_light_blink(0);
     }
-    static Protocol protocol();
+    static Coroutine coroutine();
 };
 
 struct DescaleState : State<5> {
@@ -117,7 +117,7 @@ struct DescaleState : State<5> {
         control::set_light_blink(0);
         hardware::set_solenoid(false);
     }
-    static Protocol protocol();
+    static Coroutine coroutine();
 };
 
 struct ManualControlState : State<6> {
@@ -138,7 +138,7 @@ struct ManualControlState : State<6> {
         hardware::set_solenoid(false);
         control::set_light_blink(0);
     }
-    static Protocol protocol();
+    static Coroutine coroutine();
 };
 
 using States = std::tuple<OffState, StandbyState, BrewState, SteamState, BackflushState, DescaleState, ManualControlState>;

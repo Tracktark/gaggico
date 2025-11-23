@@ -17,7 +17,7 @@ concept StateC = requires {
     { T::on_enter() } -> std::same_as<void>;
     { T::on_exit() } -> std::same_as<void>;
     { T::check_transitions() } -> std::same_as<bool>;
-    { T::protocol() } -> std::same_as<Protocol>;
+    { T::coroutine() } -> std::same_as<Coroutine>;
 };
 
 template <StateC T>
@@ -26,7 +26,7 @@ void enter_state() {
     curr_state_exit = T::on_exit;
     curr_state_check_transitions = T::check_transitions;
     T::on_enter();
-    T::protocol();
+    T::coroutine();
 }
 
 inline void leave_state() {
@@ -35,8 +35,8 @@ inline void leave_state() {
         curr_state_exit = nullptr;
     }
 
-    if (Protocol::has_coroutine) {
-        Protocol::handle().destroy();
+    if (Coroutine::has_coroutine) {
+        Coroutine::handle().destroy();
     }
     curr_state_id = -1;
 }
@@ -56,7 +56,7 @@ struct State {
     static void on_enter() {};
     static void on_exit() {};
     static bool check_transitions() {return false;};
-    static Protocol protocol() {co_return;};
+    static Coroutine coroutine() {co_return;};
 };
 
 template <typename States>
@@ -75,7 +75,7 @@ struct change_state_by_id_impl<std::tuple<T, Rest...>> {
 
 template <>
 struct change_state_by_id_impl<std::tuple<>> {
-    static void exec(int id) {}
+    static void exec(int id) { (void)id; }
 };
 
 template <typename States>

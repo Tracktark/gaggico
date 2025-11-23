@@ -32,11 +32,11 @@ bool StandbyState::check_transitions() {
     return false;
 }
 
-Protocol StandbyState::protocol() {
     if (us_since(protocol::state().machine_start_time) > 100'000)
         co_return;
     if (!protocol::state().cold_start)
         co_return;
+Coroutine StandbyState::coroutine() {
 
     hardware::set_pump(0.5);
     hardware::set_solenoid(true);
@@ -74,7 +74,7 @@ bool BrewState::check_transitions() {
     }
     return false;
 }
-Protocol BrewState::protocol() {
+Coroutine BrewState::coroutine() {
     bool has_scales = hardware::is_scale_connected();
     bool tare_started = false;
     bool tare_done = false;
@@ -132,7 +132,7 @@ bool SteamState::check_transitions() {
     }
     return false;
 }
-Protocol SteamState::protocol() {
+Coroutine SteamState::coroutine() {
     hardware::set_heater(1);
     co_await predicate([] {
         return control::sensors().temperature > settings::get().steam_temp;
@@ -182,7 +182,7 @@ Protocol SteamState::protocol() {
     }
 }
 
-Protocol BackflushState::protocol() {
+Coroutine BackflushState::coroutine() {
     for (int j = 0; j < 2; j++) {
         control::set_light_blink(1000);
         states::maintenance_msg.stage = j;
@@ -230,7 +230,7 @@ Protocol BackflushState::protocol() {
     protocol::schedule_state_change<StandbyState>();
 }
 
-Protocol DescaleState::protocol() {
+Coroutine DescaleState::coroutine() {
     for (int cycle = 0; cycle < 7; cycle++) {
         // Cleaning
         states::maintenance_msg.stage = 0;
@@ -295,7 +295,7 @@ Protocol DescaleState::protocol() {
     protocol::schedule_state_change<StandbyState>();
 }
 
-Protocol ManualControlState::protocol() {
+Coroutine ManualControlState::coroutine() {
     absolute_time_t timeout = make_timeout_time_ms(time_ms);
     while (!time_reached(timeout)) {
         co_await next_cycle;

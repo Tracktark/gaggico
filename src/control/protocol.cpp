@@ -110,9 +110,9 @@ void protocol::main_loop() {
 
         control::update_sensors();
 
-        if (Protocol::has_coroutine) {
-            Protocol::Handle handle = Protocol::handle();
-            if (!Protocol::curr_awaiter || Protocol::curr_awaiter->should_resume()) {
+        if (Coroutine::has_coroutine) {
+            Coroutine::Handle handle = Coroutine::handle();
+            if (!Coroutine::curr_awaiter || Coroutine::curr_awaiter->should_resume()) {
                 handle.resume();
                 if (handle.done()) {
                     handle.destroy();

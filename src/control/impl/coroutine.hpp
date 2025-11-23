@@ -7,12 +7,12 @@
 
 struct Awaiter;
 
-struct Protocol {
+struct Coroutine {
     static inline char buffer[256];
     static inline bool has_coroutine = false;
     static inline Awaiter* curr_awaiter = nullptr;
     struct Promise {
-        Protocol get_return_object() noexcept { return {}; }
+        Coroutine get_return_object() noexcept { return {}; }
         std::suspend_always initial_suspend() noexcept { return {}; }
         std::suspend_always final_suspend() noexcept { return {}; }
         void unhandled_exception() noexcept {}
@@ -39,17 +39,17 @@ struct Protocol {
 
 struct Awaiter {
     virtual bool should_resume() = 0;
-    void await_suspend(Protocol::Handle) {
-        Protocol::curr_awaiter = this;
+    void await_suspend(Coroutine::Handle) {
+        Coroutine::curr_awaiter = this;
     }
     void await_resume() {
-        Protocol::curr_awaiter = nullptr;
+        Coroutine::curr_awaiter = nullptr;
     }
 };
 
 struct next_cycle_t {
     bool await_ready() const { return false; }
-    void await_suspend(Protocol::Handle) const {}
+    void await_suspend(Coroutine::Handle) const {}
     void await_resume() const {}
 };
 constexpr next_cycle_t next_cycle {};
