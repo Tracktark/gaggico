@@ -16,7 +16,7 @@ struct PSM {
     u32 divider_counter = 0;
 
     explicit PSM(u32 control_pin, u32 max_value)
-        : control_pin(control_pin), max_value(max_value) {
+        : max_value(max_value), control_pin(control_pin) {
 
         gpio_init(control_pin);
         gpio_set_dir(control_pin, true);
@@ -46,5 +46,8 @@ struct PSM {
 
     constexpr void set(u32 value) {
         set_value = MIN(value, max_value);
+        if (value == 0) {
+            gpio_put(control_pin, false);
+        }
     }
 };
