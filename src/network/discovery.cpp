@@ -10,6 +10,7 @@ const char* RESPONSE = "gaggico";
 static struct pbuf* resp_pbuf = nullptr;
 
 static void incoming_callback(void* arg, struct udp_pcb* pcb, struct pbuf* inp, const ip_addr_t* addr, u16_t port) {
+    (void) arg;
     pbuf_free(inp);
     udp_sendto(pcb, resp_pbuf, addr, port);
 }

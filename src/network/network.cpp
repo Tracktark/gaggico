@@ -34,16 +34,16 @@ constexpr auto CLIENT_CAPACITY = 5;
 
 struct Client {
     tcp_pcb* pcb;
-    usize current_in_msg_len;
-    usize recved_len;
-    usize written_len;
-    usize acked_len;
+    isize current_in_msg_len;
+    isize recved_len;
+    isize written_len;
+    isize acked_len;
     absolute_time_t ack_timeout;
     u8 recved_magic;
     u8 message_buffer[IN_MESSAGE_BUFFER_CAP];
 };
 
-static Client clients[CLIENT_CAPACITY] = {0};
+static Client clients[CLIENT_CAPACITY];
 
 static u8 out_message_buffer[OUT_MESSAGE_BUFFER_CAP];
 static isize out_message_len = -1;
@@ -64,7 +64,7 @@ static err_t close_connection(tcp_pcb* pcb) {
     return ERR_OK;
 }
 
-static bool try_receive(Client& client, pbuf* p, usize size, u32& offset) {
+static bool try_receive(Client& client, pbuf* p, isize size, u32& offset) {
     u32 copied = pbuf_copy_partial(p,
                                    client.message_buffer + client.recved_len,
                                    size - client.recved_len,
@@ -151,10 +151,10 @@ static void err_callback(void* arg, err_t err) {
 }
 
 static err_t sent_callback(void* arg, tcp_pcb* tpcb, u16 len) {
+    (void) tpcb;
     Client& client = *static_cast<Client*>(arg);
-    u32 id = (&client - clients);
     client.acked_len += len;
-    DEBUG("Client %u received %u out of %u bytes\n", id, client.acked_len, out_message_len);
+    DEBUG("Client %u received %u out of %u bytes\n", (&client - clients), client.acked_len, out_message_len);
     client.ack_timeout = client.acked_len < out_message_len
                              ? make_timeout_time_ms(ACK_TIMEOUT_MS)
                              : at_the_end_of_time;
@@ -162,6 +162,7 @@ static err_t sent_callback(void* arg, tcp_pcb* tpcb, u16 len) {
 }
 
 static err_t new_connection_callback(void* arg, struct tcp_pcb* client_pcb, err_t err) {
+    (void) arg;
     if (err != ERR_OK || client_pcb == NULL) {
         printf("Error on new connection: %d\n", err);
         return ERR_VAL;

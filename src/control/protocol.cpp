@@ -48,6 +48,7 @@ void protocol::schedule_state_change_by_id(int id) {
 }
 
 void protocol::on_state_change(int old_state_id, int new_state_id) {
+    (void)old_state_id;
     _state.state_change_time = get_absolute_time();
 
     StateChangeMessage msg;
@@ -133,7 +134,7 @@ static void open_brew_log_file() {
     int n = snprintf(brew_log_filename, 32, "brew/%04d-%02d-%02d_%02d-%02d-%02d",
                      datetime.year, datetime.month, datetime.day, datetime.hour,
                      datetime.min, datetime.sec);
-    if (n < 0 && n >= 32) {
+    if (n < 0 || n >= 32) {
         printf("Brew Log Error: Couldn't write filename\n");
         return;
     }

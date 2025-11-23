@@ -48,6 +48,7 @@ string(TIMESTAMP CURRENT_YEAR "%Y")
 
 target_compile_definitions(gaggico PRIVATE CURRENT_YEAR=${CURRENT_YEAR})
 # target_compile_definitions(gaggico PRIVATE DEBUG_NO_HARDWARE)
+target_compile_options(gaggico PRIVATE -Wall -Wextra)
 
 pico_enable_stdio_usb(gaggico 1)
 pico_enable_stdio_uart(gaggico 0)

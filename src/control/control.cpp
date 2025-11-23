@@ -113,8 +113,6 @@ void control::update() {
             close_enough_time = make_timeout_time_ms(30000);
         }
 
-        auto& state = protocol::state();
-
         hardware::set_light(hardware::Brew, temp_close_enough && time_reached(close_enough_time));
     }
 

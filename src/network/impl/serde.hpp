@@ -79,7 +79,10 @@ struct read_impl {
 
 template <typename T, std::size_t FieldCount>
 struct read_impl<T, FieldCount, 0> {
-    static void read(T& val, u8*& data_ptr) {}
+    static void read(T& val, u8*& data_ptr) {
+        (void) val;
+        (void) data_ptr;
+    }
 };
 
 template <CustomRead T>
@@ -108,7 +111,10 @@ struct write_impl {
 
 template <typename T, std::size_t FieldCount>
 struct write_impl<T, FieldCount, 0> {
-    static void write(const T& val, u8*& data_ptr) {}
+    static void write(const T& val, u8*& data_ptr) {
+        (void) val;
+        (void) data_ptr;
+    }
 };
 
 

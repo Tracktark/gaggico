@@ -42,11 +42,6 @@ constexpr auto SCALE_MULT_L = 2189.f;
 constexpr auto SCALE_MULT_R = -2273.f;
 constexpr auto SCALE_TARE_STEPS = 5;
 
-constexpr auto SD_SCK_PIN = 10;
-constexpr auto SD_TX_PIN = 11;
-constexpr auto SD_RX_PIN = 12;
-constexpr auto SD_CS_PIN = 13;
-
 static absolute_time_t switch_transition_time[3] = {nil_time};
 static absolute_time_t next_temp_read_time = nil_time;
 static critical_section_t temp_cs;

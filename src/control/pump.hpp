@@ -21,7 +21,7 @@ constexpr float pressure_to_flow_coeff[] = {
 
 constexpr float get_flow_per_click_datasheet(float pressure) {
     float result = pressure_to_flow_coeff[0];
-    for (int i = 1; i < (sizeof(pressure_to_flow_coeff) / sizeof(float)); ++i) {
+    for (size_t i = 1; i < (sizeof(pressure_to_flow_coeff) / sizeof(float)); ++i) {
         result *= pressure;
         result += pressure_to_flow_coeff[i];
     }

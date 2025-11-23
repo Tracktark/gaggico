@@ -68,7 +68,6 @@ bool BrewState::check_transitions() {
     }
 
     const control::Sensors& s = control::sensors();
-    const Settings set = settings::get();
     if (hardware::is_scale_connected() && s.weight < 0 && s.weight > -5 && !hardware::is_scale_taring()) {
         hardware::scale_tare_immediately();
     }
@@ -141,7 +140,6 @@ Coroutine SteamState::coroutine() {
 
     const control::Sensors& sensors = control::sensors();
     const Settings &settings = settings::get();
-    constexpr float PRESSURE_TARGET = 4;
 
     bool valve_open = false;
     float max_pressure = sensors.pressure;

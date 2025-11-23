@@ -29,7 +29,11 @@ struct handle_impl<std::variant<T, Ts...>, Variant> {
 
 template <typename Variant>
 struct handle_impl<std::variant<>, Variant> {
-    static void handle(int msg_id, Variant& msg, u8*& data) {}
+    static void handle(int msg_id, Variant& msg, u8*& data) {
+        (void) msg_id;
+        (void) msg;
+        (void) data;
+    }
 };
 
 template <typename Variant>
