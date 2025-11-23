@@ -5,8 +5,8 @@
 #include <pico/time.h>
 
 // Assume enabled heater can raise the temperature of water by at least HEATING_GAIN °C over DEADLINE_S seconds
-constexpr int HEATING_GAIN = 1;
-constexpr int DEADLINE_S = 10;
+constexpr int HEATING_GAIN = 10;
+constexpr int DEADLINE_S = 30;
 
 struct ThermalRunawayCheck {
     absolute_time_t deadline = nil_time;
@@ -22,7 +22,7 @@ struct ThermalRunawayCheck {
 
         if (time_reached(deadline) || temp >= goal_temp) {
             if (temp < goal_temp) {
-                printf("Thermal runaway check failed, temp: %.2f, goal: %.2f, heater: %u%%, pump: %u%%\n",
+                printf("Thermal runaway check failed, temp: %.2f, goal: %.2f, heater: %ld%%, pump: %ld%%\n",
                        temp, goal_temp, heater_power, pump_power);
                 return true;
             }
