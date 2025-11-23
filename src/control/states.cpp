@@ -32,33 +32,47 @@ bool StandbyState::check_transitions() {
     return false;
 }
 
-    if (us_since(protocol::state().machine_start_time) > 100'000)
-        co_return;
-    if (!protocol::state().cold_start)
-        co_return;
 Coroutine StandbyState::coroutine() {
+    bool should_prefill =
+        us_since(protocol::state().machine_start_time) < 100'000 &&
+        protocol::state().cold_start;
 
-    hardware::set_pump(0.5);
-    hardware::set_solenoid(true);
+    if (should_prefill) {
+        hardware::set_pump(0.5);
+        hardware::set_solenoid(true);
 
-    co_await delay_ms(200);
+        co_await delay_ms(200);
 
-    constexpr auto MAX_PREFILL_TIME_MS = 12000;
-    absolute_time_t timeout = make_timeout_time_ms(MAX_PREFILL_TIME_MS);
+        constexpr auto MAX_PREFILL_TIME_MS = 12000;
+        absolute_time_t timeout = make_timeout_time_ms(MAX_PREFILL_TIME_MS);
 
-    while (true) {
-        co_await delay_ms(10);
+        while (true) {
+            co_await delay_ms(10);
 
-        if (time_reached(timeout)) break;
+            if (time_reached(timeout)) break;
 
-        float pressure = control::sensors().pressure;
-        if (pressure > 0.42f) break;
+            float pressure = control::sensors().pressure;
+            if (pressure > 0.42f) break;
+        }
+
+        hardware::set_pump(0);
+        hardware::set_solenoid(false);
+        co_await delay_ms(2000);
+        hardware::scale_start_tare();
     }
 
-    hardware::set_pump(0);
-    hardware::set_solenoid(false);
-    co_await delay_ms(2000);
-    hardware::scale_start_tare();
+    constexpr float PRESSURE_THRESHOLD = 0.7f;
+    while (true) {
+        co_await delay_ms(25'000);
+        if (control::sensors().pressure > PRESSURE_THRESHOLD) {
+            control::set_light_blink(250);
+            co_await delay_ms(5'000);
+            hardware::set_solenoid(true);
+            co_await predicate([]{return control::sensors().pressure < PRESSURE_THRESHOLD;});
+            control::set_light_blink(0);
+        }
+        hardware::set_solenoid(false);
+    }
 }
 
 bool BrewState::check_transitions() {
