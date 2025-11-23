@@ -97,9 +97,7 @@ void control::update_sensors() {
 }
 
 void control::update() {
-    if (heater_enabled) {
-        if (!time_reached(heater_update_timeout))
-            return;
+    if (heater_enabled && time_reached(heater_update_timeout)) {
         heater_update_timeout = make_timeout_time_ms(250);
 
         float curr_temp = _sensors.temperature;
